@@ -113,24 +113,37 @@ def find_column(colunas, aliases) -> Optional[str]:
     # descritivo). A direcao inversa foi removida por causar falsos
     # positivos (ex.: coluna "Duration" casando com o alias "duration
     # (hours)" por "duration" ser substring do alias).
+    #
+    # Aliases com menos de 4 caracteres normalizados ficam de fora do
+    # fallback (continuam valendo para o match exato acima). Um alias como
+    # "nº" normaliza para "no" e, por substring, casaria com qualquer
+    # cabecalho terminado nesse par de letras (ex.: "Codigo Interno" tem
+    # "...terno", que contem "no") — um falso positivo real ja observado.
+    TAMANHO_MINIMO_SUBSTRING = 4
     for coluna, norm in colunas_normalizadas.items():
         for alias in aliases_normalizados:
-            if alias and alias in norm:
+            if alias and len(alias) >= TAMANHO_MINIMO_SUBSTRING and alias in norm:
                 return coluna
     return None
 
 
-def map_columns(df: pd.DataFrame, mapa_aliases: dict) -> pd.DataFrame:
+def map_columns(df: pd.DataFrame, mapa_aliases: dict) -> tuple[pd.DataFrame, dict]:
     """Retorna um DataFrame com colunas renomeadas para os nomes canonicos.
 
     Colunas nao encontradas ficam ausentes (o chamador deve tratar via
     ``.get`` com valor padrao) — nunca lemos por indice/letra fixa.
+
+    Tambem retorna um dicionario de diagnostico ``{campo_canonico: coluna_real_ou_None}``
+    para que o chamador possa avisar o usuario quando um cabecalho esperado
+    nao foi localizado no arquivo enviado.
     """
     resultado = pd.DataFrame(index=df.index)
+    mapeamento = {}
     for campo_canonico, aliases in mapa_aliases.items():
         coluna_real = find_column(df.columns, aliases)
         resultado[campo_canonico] = df[coluna_real] if coluna_real else None
-    return resultado
+        mapeamento[campo_canonico] = coluna_real
+    return resultado, mapeamento
 
 
 def extrair_chamado(titulo: Optional[str]) -> Optional[str]:

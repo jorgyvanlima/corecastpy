@@ -30,47 +30,104 @@ from app.services.parsing_utils import (
 )
 
 HORAS_COLS = {
-    "title": ["title", "titulo", "título"],
-    "work_item_id": ["id", "work item id", "item id", "workitem id"],
-    "work_item_type": ["work item type", "tipo", "type"],
-    "assigned_to": ["assigned to", "atribuido a", "atribuído a", "responsavel", "responsável"],
+    "title": ["title", "titulo", "título", "título do item de trabalho"],
+    "work_item_id": ["id", "work item id", "item id", "workitem id", "id do item de trabalho"],
+    "work_item_type": ["work item type", "tipo", "type", "tipo de item de trabalho", "tipo de trabalho"],
+    "assigned_to": [
+        "assigned to", "atribuido a", "atribuído a", "atribuido para", "atribuído para",
+        "responsavel", "responsável",
+    ],
     "state": ["state", "estado"],
-    "grupo_atribuicao": ["area path", "team", "grupo de atribuicao", "grupo de atribuição", "assignment group"],
-    "horas": ["effort", "completed work", "horas", "esforco", "esforço"],
-    "iteration_path": ["iteration path", "iteration", "sprint"],
+    "grupo_atribuicao": [
+        "area path", "team", "grupo de atribuicao", "grupo de atribuição", "assignment group",
+        "caminho de area", "caminho da area", "caminho de área", "caminho da área", "equipe",
+    ],
+    "horas": [
+        "effort", "completed work", "horas", "esforco", "esforço",
+        "trabalho concluido", "trabalho concluído", "horas apontadas",
+    ],
+    "iteration_path": [
+        "iteration path", "iteration", "sprint",
+        "caminho de iteracao", "caminho da iteracao", "caminho de iteração", "caminho da iteração", "iteracao", "iteração",
+    ],
 }
 
 INC_COLS = {
-    "numero": ["number", "numero", "número"],
-    "criado_em": ["opened", "criado em", "created", "data de abertura"],
-    "estado": ["state", "estado"],
-    "atribuicao_a": ["assigned to", "atribuido a", "atribuído a"],
-    "grupo_atribuicao": ["assignment group", "grupo de atribuicao", "grupo de atribuição"],
-    "business_application": ["business application", "aplicacao de negocio", "aplicação de negócio"],
-    "data_ultimo_comentario": ["updated", "data do ultimo comentario", "data do último comentário", "last updated"],
+    "numero": ["number", "numero", "número", "nº", "chamado"],
+    "criado_em": ["opened", "criado em", "created", "data de abertura", "aberto em"],
+    "estado": ["state", "estado", "situacao", "situação"],
+    "atribuicao_a": ["assigned to", "atribuido a", "atribuído a", "atribuido para", "atribuído para"],
+    "grupo_atribuicao": [
+        "assignment group", "grupo de atribuicao", "grupo de atribuição", "grupo designado",
+    ],
+    "business_application": [
+        "business application", "aplicacao de negocio", "aplicação de negócio", "aplicativo de negocios",
+        "aplicativo de negócios",
+    ],
+    "data_ultimo_comentario": [
+        "updated", "data do ultimo comentario", "data do último comentário", "last updated", "atualizado em",
+    ],
     "prioridade": ["priority", "prioridade"],
     "duracao_segundos": ["duration", "duracao", "duração"],
     "duracao_negocios_segundos": [
         "business duration", "duracao de negocios", "duração de negócios", "business duration (seconds)",
+        "duracao comercial", "duração comercial", "duracao dos negocios", "duração dos negócios",
     ],
-    "duracao_horas": ["duration (hours)", "duracao horas", "duração horas", "horas de duracao"],
-    "contagem_reaberturas": ["reopen count", "reaberturas", "contagem de reaberturas"],
-    "descricao_resumida": ["short description", "descricao resumida", "descrição resumida"],
+    "duracao_horas": ["duration (hours)", "duracao horas", "duração horas", "horas de duracao", "horas de duração"],
+    "contagem_reaberturas": [
+        "reopen count", "reaberturas", "contagem de reaberturas", "contagem de reabertura", "número de reaberturas",
+        "numero de reaberturas",
+    ],
+    "descricao_resumida": ["short description", "descricao resumida", "descrição resumida", "descricao breve"],
 }
 
 REQ_COLS = {
-    "numero": ["number", "numero", "número"],
+    "numero": ["number", "numero", "número", "nº", "item"],
     "classificacao_demanda": [
         "request classification", "classificacao da demanda", "classificação da demanda", "classification",
+        "classificacao", "classificação",
     ],
-    "complexidade_demanda": ["complexity", "complexidade", "complexidade da demanda"],
-    "criacao_em": ["opened", "created", "criado em", "data de abertura"],
-    "estado": ["state", "estado"],
-    "grupo_atribuicao": ["assignment group", "grupo de atribuicao", "grupo de atribuição"],
-    "atribuicao_a": ["assigned to", "atribuido a", "atribuído a"],
-    "business_application": ["business application", "aplicacao de negocio", "aplicação de negócio"],
+    "complexidade_demanda": ["complexity", "complexidade", "complexidade da demanda", "complexidade"],
+    "criacao_em": ["opened", "created", "criado em", "data de abertura", "aberto em"],
+    "estado": ["state", "estado", "situacao", "situação"],
+    "grupo_atribuicao": ["assignment group", "grupo de atribuicao", "grupo de atribuição", "grupo designado"],
+    "atribuicao_a": ["assigned to", "atribuido a", "atribuído a", "atribuido para", "atribuído para"],
+    "business_application": [
+        "business application", "aplicacao de negocio", "aplicação de negócio", "aplicativo de negocios",
+        "aplicativo de negócios",
+    ],
     "horas_consumidas": ["horas consumidas", "effort", "horas"],
 }
+
+# Campos considerados obrigatorios por arquivo: se o cabecalho correspondente
+# nao for localizado, um aviso claro e retornado ao usuario (a causa mais
+# comum de "importacao concluida mas sem dados" e um nome de coluna que o
+# export real usa e nossos sinonimos nao cobrem ainda).
+CAMPOS_CRITICOS = {
+    "horas": ["title", "horas", "iteration_path"],
+    "incidentes": ["numero"],
+    "requisicoes": ["numero"],
+}
+
+
+def _read_csv_tolerante(upload_file) -> pd.DataFrame:
+    """Le CSV tentando encodings comuns em exports do Windows/Azure DevOps.
+
+    Um CSV salvo como UTF-16 (comum em exports feitos via Excel/PowerShell
+    no Windows) faz o ``pandas`` ler tudo como uma unica coluna ilegivel
+    quando lido como UTF-8 — isso nao gera erro, apenas faz o mapeamento de
+    cabecalho falhar silenciosamente para todas as colunas.
+    """
+    for encoding in ("utf-8-sig", "utf-16", "latin-1"):
+        try:
+            upload_file.file.seek(0)
+            df = pd.read_csv(upload_file.file, sep=None, engine="python", encoding=encoding)
+            if len(df.columns) > 1 or encoding == "latin-1":
+                return df
+        except (UnicodeDecodeError, UnicodeError, pd.errors.ParserError):
+            continue
+    upload_file.file.seek(0)
+    return pd.read_csv(upload_file.file, sep=None, engine="python")
 
 
 def _read_tabular(upload_file) -> Optional[pd.DataFrame]:
@@ -79,7 +136,7 @@ def _read_tabular(upload_file) -> Optional[pd.DataFrame]:
     nome = upload_file.filename.lower()
     upload_file.file.seek(0)
     if nome.endswith(".csv"):
-        return pd.read_csv(upload_file.file, sep=None, engine="python")
+        return _read_csv_tolerante(upload_file)
     return pd.read_excel(upload_file.file)
 
 
@@ -105,6 +162,16 @@ def _match_rac_sheets(sheets: dict):
     if df_req is None and len(abas_ordenadas) > 2:
         df_req = abas_ordenadas[2]
     return df_horas, df_inc, df_req
+
+
+def _avisar_colunas_nao_localizadas(avisos: list, nome_arquivo: str, mapeamento: dict, colunas_disponiveis) -> None:
+    campos_criticos = CAMPOS_CRITICOS.get(nome_arquivo, [])
+    faltantes = [campo for campo in campos_criticos if not mapeamento.get(campo)]
+    if faltantes:
+        avisos.append(
+            f"Arquivo de {nome_arquivo.capitalize()}: nao foi possivel localizar a coluna esperada para "
+            f"{', '.join(faltantes)}. Cabecalhos encontrados no arquivo: {', '.join(map(str, colunas_disponiveis))}."
+        )
 
 
 def _atualizar_totais_competencia(db: Session, competencia: Competencia) -> None:
@@ -168,11 +235,15 @@ class FileImportService:
 
         # 2. Horas Tereos — filtro de competencia + cruzamento deterministico.
         if df_horas is not None and not df_horas.empty:
-            df_map = map_columns(df_horas, HORAS_COLS)
+            df_map, mapeamento_horas = map_columns(df_horas, HORAS_COLS)
+            _avisar_colunas_nao_localizadas(resultado["avisos"], "horas", mapeamento_horas, df_horas.columns)
+            total_linhas_horas = len(df_map)
+            descartadas_por_competencia = 0
             registros = []
             for _, row in df_map.iterrows():
                 iteration_path = safe_str(row.get("iteration_path"))
                 if not iteration_path_pertence_competencia(iteration_path, ano, mes):
+                    descartadas_por_competencia += 1
                     continue
                 title = safe_str(row.get("title"))
                 chamado = extrair_chamado(title)
@@ -196,12 +267,25 @@ class FileImportService:
             if registros:
                 db.bulk_save_objects(registros)
             resultado["horas"] = len(registros)
+            if total_linhas_horas and not registros:
+                resultado["avisos"].append(
+                    f"Arquivo de Horas Tereos: {total_linhas_horas} linha(s) lida(s), porem nenhuma corresponde a "
+                    f"competencia {competencia.rotulo} pelo Iteration Path. Verifique se a coluna de iteracao "
+                    "contem o mes/ano da competencia (ex.: 'Agosto 2026', 'ago-26' ou '2026-08')."
+                )
+            elif descartadas_por_competencia:
+                resultado["avisos"].append(
+                    f"Arquivo de Horas Tereos: {descartadas_por_competencia} de {total_linhas_horas} linha(s) "
+                    "descartada(s) por pertencerem a outra competencia (comportamento esperado)."
+                )
         else:
             resultado["avisos"].append("Arquivo de Horas Tereos nao informado ou vazio para esta competencia.")
 
         # 3. Incidentes — calculo de SLA e aging.
         if df_inc is not None and not df_inc.empty:
-            df_map = map_columns(df_inc, INC_COLS)
+            df_map, mapeamento_inc = map_columns(df_inc, INC_COLS)
+            _avisar_colunas_nao_localizadas(resultado["avisos"], "incidentes", mapeamento_inc, df_inc.columns)
+            total_linhas_inc = len(df_map)
             registros = []
             for _, row in df_map.iterrows():
                 numero = safe_str(row.get("numero"))
@@ -240,12 +324,19 @@ class FileImportService:
             if registros:
                 db.bulk_save_objects(registros)
             resultado["incidentes"] = len(registros)
+            if total_linhas_inc and not registros:
+                resultado["avisos"].append(
+                    f"Arquivo de Incidentes: {total_linhas_inc} linha(s) lida(s), porem nenhuma possuia a coluna "
+                    "de numero do chamado preenchida — nenhum incidente foi importado."
+                )
         else:
             resultado["avisos"].append("Arquivo de Incidentes nao informado ou vazio para esta competencia.")
 
         # 4. Requisicoes.
         if df_req is not None and not df_req.empty:
-            df_map = map_columns(df_req, REQ_COLS)
+            df_map, mapeamento_req = map_columns(df_req, REQ_COLS)
+            _avisar_colunas_nao_localizadas(resultado["avisos"], "requisicoes", mapeamento_req, df_req.columns)
+            total_linhas_req = len(df_map)
             registros = []
             for _, row in df_map.iterrows():
                 numero = safe_str(row.get("numero"))
@@ -270,6 +361,11 @@ class FileImportService:
             if registros:
                 db.bulk_save_objects(registros)
             resultado["requisicoes"] = len(registros)
+            if total_linhas_req and not registros:
+                resultado["avisos"].append(
+                    f"Arquivo de Requisicoes: {total_linhas_req} linha(s) lida(s), porem nenhuma possuia a coluna "
+                    "de numero do chamado preenchida — nenhuma requisicao foi importada."
+                )
         else:
             resultado["avisos"].append("Arquivo de Requisicoes nao informado ou vazio para esta competencia.")
 
