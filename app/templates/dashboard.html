@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block titulo %}Dashboard{% endblock %}
+{% block content %}
+
+<form method="get" action="/dashboard" class="row g-2 align-items-end mb-4">
+    <div class="col-auto">
+        <label class="form-label mb-0">Competencia</label>
+        <select class="form-select" name="competencia_id" onchange="this.form.submit()">
+            {% for c in competencias %}
+            <option value="{{ c.id }}" {% if competencia and c.id == competencia.id %}selected{% endif %}>{{ c.rotulo }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% if competencia %}
+    <div class="col-auto">
+        <a href="/exportar/dados-rac?competencia_id={{ competencia.id }}" class="btn btn-corecast">Exportar Dados_RAC</a>
+    </div>
+    {% endif %}
+</form>
+
+{% if not competencia %}
+<div class="alert alert-info">Nenhuma competencia cadastrada. Acesse <a href="/importar">Importar</a> para comecar.</div>
+{% else %}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card-kpi bg-white">
+            <div class="rotulo">Eficiencia de SLA</div>
+            <div class="valor">{{ cards.eficiencia_sla }}%</div>
+            <span class="badge {{ 'badge-meta-ok' if cards.eficiencia_sla >= meta_eficiencia else 'badge-meta-alerta' }}">Meta &ge; {{ meta_eficiencia }}%</span>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-kpi bg-white">
+            <div class="rotulo">Aging 8 Dias</div>
+            <div class="valor">{{ cards.aging_pct }}%</div>
+            <span class="badge {{ 'badge-meta-ok' if cards.aging_pct >= meta_aging else 'badge-meta-alerta' }}">Meta = {{ meta_aging }}%</span>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-kpi bg-white">
+            <div class="rotulo">Taxa de Reabertura</div>
+            <div class="valor">{{ cards.taxa_reabertura }}%</div>
+            <span class="badge {{ 'badge-meta-ok' if cards.taxa_reabertura <= meta_reabertura else 'badge-meta-alerta' }}">Meta &le; {{ meta_reabertura }}%</span>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-kpi bg-white">
+            <div class="rotulo">Total de Horas</div>
+            <div class="valor">{{ cards.total_horas }}h</div>
+            <span class="text-muted small">{{ cards.total_incidentes }} incidentes / {{ cards.total_requisicoes }} requisicoes</span>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-4">
+        <div class="card p-3">
+            <h6>SLA por Prioridade</h6>
+            <canvas id="graficoPrioridade" height="220"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card p-3">
+            <h6>Distribuicao SLA</h6>
+            <canvas id="graficoPizza" height="220"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card p-3">
+            <h6>Horas por Grupo de Atribuicao</h6>
+            <canvas id="graficoGrupo" height="220"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="card p-3">
+    <h6>Top 10 Incidentes em Atraso</h6>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Numero</th>
+                    <th>Prioridade</th>
+                    <th>Grupo</th>
+                    <th>Duracao (h)</th>
+                    <th>Meta (h)</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in top_atrasados %}
+                <tr>
+                    <td>{{ i.numero }}</td>
+                    <td>{{ i.prioridade }}</td>
+                    <td>{{ i.grupo_atribuicao }}</td>
+                    <td>{{ i.duracao_horas }}</td>
+                    <td>{{ i.meta_sla_horas }}</td>
+                    <td class="status-atraso">{{ i.status_sla }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="text-center text-muted">Nenhum incidente em atraso.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if competencia %}
+<script>
+const corPaleta = {
+    azul: '#16336e',
+    roxo: '#6c3ce9',
+    verde: '#16a34a',
+    vermelho: '#dc2626',
+};
+
+new Chart(document.getElementById('graficoPrioridade'), {
+    type: 'bar',
+    data: {
+        labels: {{ sla_prioridade.labels | tojson }},
+        datasets: [
+            { label: 'No Prazo', data: {{ sla_prioridade.no_prazo | tojson }}, backgroundColor: corPaleta.verde },
+            { label: 'Atraso', data: {{ sla_prioridade.atraso | tojson }}, backgroundColor: corPaleta.vermelho },
+        ]
+    },
+    options: { responsive: true, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
+});
+
+new Chart(document.getElementById('graficoPizza'), {
+    type: 'doughnut',
+    data: {
+        labels: {{ sla_pizza.labels | tojson }},
+        datasets: [{ data: {{ sla_pizza.valores | tojson }}, backgroundColor: [corPaleta.verde, corPaleta.vermelho] }]
+    },
+    options: { responsive: true }
+});
+
+new Chart(document.getElementById('graficoGrupo'), {
+    type: 'bar',
+    data: {
+        labels: {{ horas_grupo.labels | tojson }},
+        datasets: [{ label: 'Horas', data: {{ horas_grupo.valores | tojson }}, backgroundColor: corPaleta.roxo }]
+    },
+    options: { responsive: true, indexAxis: 'y', scales: { x: { beginAtZero: true } } }
+});
+</script>
+{% endif %}
+{% endblock %}

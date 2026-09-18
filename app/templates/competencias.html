@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block titulo %}Competencias{% endblock %}
+{% block content %}
+
+<div class="row">
+    <div class="col-lg-4">
+        <div class="card p-4 mb-4">
+            <h6 class="mb-3">Nova Competencia</h6>
+            <form method="post" action="/competencias">
+                <div class="mb-3">
+                    <label class="form-label">Mes/Ano</label>
+                    <input type="month" class="form-control" name="ano_mes" required>
+                </div>
+                <button type="submit" class="btn btn-corecast w-100">Criar</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card p-3">
+            <h6 class="mb-3">Bases Mensais Cadastradas</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Competencia</th>
+                            <th>Status</th>
+                            <th>Horas</th>
+                            <th>Incidentes</th>
+                            <th>Requisicoes</th>
+                            <th>SLA</th>
+                            <th class="text-end">Acoes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in competencias %}
+                        <tr>
+                            <td>{{ c.rotulo }}</td>
+                            <td><span class="badge {{ 'status-aberta' if c.status == 'Aberta' else 'status-fechada' }}">{{ c.status }}</span></td>
+                            <td>{{ c.total_horas }}</td>
+                            <td>{{ c.total_incidentes }}</td>
+                            <td>{{ c.total_requisicoes }}</td>
+                            <td>{{ c.sla_cumprimento }}%</td>
+                            <td class="text-end">
+                                <a href="/dashboard?competencia_id={{ c.id }}" class="btn btn-sm btn-outline-secondary">Ver</a>
+                                <form method="post" action="/competencias/{{ c.id }}/status" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">{{ 'Fechar' if c.status == 'Aberta' else 'Reabrir' }}</button>
+                                </form>
+                                <form method="post" action="/competencias/{{ c.id }}/excluir" class="d-inline" onsubmit="return confirm('Excluir a competencia {{ c.rotulo }} e todos os dados vinculados? Esta acao nao pode ser desfeita.');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="7" class="text-center text-muted">Nenhuma competencia cadastrada.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

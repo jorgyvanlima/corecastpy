@@ -1,0 +1,37 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8092:8000"
+    environment:
+      - DATABASE_URL=postgresql://corecast_user:corecast_pass@db:5432/corecast_db
+      - SECRET_KEY=${SECRET_KEY:-corecast-dev-secret-change-me}
+      - SLA_META_P3_HORAS=${SLA_META_P3_HORAS:-12}
+      - SLA_META_P4_HORAS=${SLA_META_P4_HORAS:-32}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@corecast.local}
+      - ADMIN_SENHA=${ADMIN_SENHA:-admin123}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: corecast_db
+      POSTGRES_USER: corecast_user
+      POSTGRES_PASSWORD: corecast_pass
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U corecast_user -d corecast_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
