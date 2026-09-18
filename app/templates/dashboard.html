@@ -1,83 +1,109 @@
 {% extends "base.html" %}
 {% block titulo %}Dashboard{% endblock %}
+{% block titulo_pagina %}Dashboard Mensal{% endblock %}
+{% block breadcrumb_atual %}Dashboard{% endblock %}
+
 {% block content %}
 
-<form method="get" action="/dashboard" class="row g-2 align-items-end mb-4">
-    <div class="col-auto">
-        <label class="form-label mb-0">Competencia</label>
-        <select class="form-select" name="competencia_id" onchange="this.form.submit()">
-            {% for c in competencias %}
-            <option value="{{ c.id }}" {% if competencia and c.id == competencia.id %}selected{% endif %}>{{ c.rotulo }}</option>
-            {% endfor %}
-        </select>
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <form method="get" action="/dashboard" class="row g-2 align-items-center">
+            <div class="col-auto">
+                <label class="col-form-label">Competencia</label>
+            </div>
+            <div class="col-auto">
+                <select class="form-select" name="competencia_id" onchange="this.form.submit()">
+                    {% for c in competencias %}
+                    <option value="{{ c.id }}" {% if competencia and c.id == competencia.id %}selected{% endif %}>{{ c.rotulo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if competencia %}
+            <div class="col-auto ms-auto">
+                <a href="/exportar/dados-rac?competencia_id={{ competencia.id }}" class="btn btn-outline-primary">
+                    <i class="bi bi-file-earmark-excel me-1"></i>Exportar Dados_RAC
+                </a>
+            </div>
+            {% endif %}
+        </form>
     </div>
-    {% if competencia %}
-    <div class="col-auto">
-        <a href="/exportar/dados-rac?competencia_id={{ competencia.id }}" class="btn btn-corecast">Exportar Dados_RAC</a>
-    </div>
-    {% endif %}
-</form>
+</div>
 
 {% if not competencia %}
-<div class="alert alert-info">Nenhuma competencia cadastrada. Acesse <a href="/importar">Importar</a> para comecar.</div>
+<div class="alert alert-info">
+    <i class="bi bi-info-circle me-1"></i>
+    Nenhuma competencia cadastrada. Acesse <a href="/importar">Importar</a> para comecar.
+</div>
 {% else %}
 
-<div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="card-kpi bg-white">
-            <div class="rotulo">Eficiencia de SLA</div>
-            <div class="valor">{{ cards.eficiencia_sla }}%</div>
-            <span class="badge {{ 'badge-meta-ok' if cards.eficiencia_sla >= meta_eficiencia else 'badge-meta-alerta' }}">Meta &ge; {{ meta_eficiencia }}%</span>
+<div class="row">
+    <div class="col-lg-3 col-6">
+        <div class="small-box {{ 'text-bg-success' if cards.eficiencia_sla >= meta_eficiencia else 'text-bg-danger' }}">
+            <div class="inner">
+                <h3>{{ cards.eficiencia_sla }}<sup class="fs-6">%</sup></h3>
+                <p>Eficiencia de SLA</p>
+            </div>
+            <i class="small-box-icon bi bi-speedometer2"></i>
+            <span class="small-box-footer">Meta &ge; {{ meta_eficiencia }}%</span>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card-kpi bg-white">
-            <div class="rotulo">Aging 8 Dias</div>
-            <div class="valor">{{ cards.aging_pct }}%</div>
-            <span class="badge {{ 'badge-meta-ok' if cards.aging_pct >= meta_aging else 'badge-meta-alerta' }}">Meta = {{ meta_aging }}%</span>
+    <div class="col-lg-3 col-6">
+        <div class="small-box {{ 'text-bg-success' if cards.aging_pct >= meta_aging else 'text-bg-danger' }}">
+            <div class="inner">
+                <h3>{{ cards.aging_pct }}<sup class="fs-6">%</sup></h3>
+                <p>Aging 8 Dias</p>
+            </div>
+            <i class="small-box-icon bi bi-hourglass-split"></i>
+            <span class="small-box-footer">Meta = {{ meta_aging }}%</span>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card-kpi bg-white">
-            <div class="rotulo">Taxa de Reabertura</div>
-            <div class="valor">{{ cards.taxa_reabertura }}%</div>
-            <span class="badge {{ 'badge-meta-ok' if cards.taxa_reabertura <= meta_reabertura else 'badge-meta-alerta' }}">Meta &le; {{ meta_reabertura }}%</span>
+    <div class="col-lg-3 col-6">
+        <div class="small-box {{ 'text-bg-success' if cards.taxa_reabertura <= meta_reabertura else 'text-bg-danger' }}">
+            <div class="inner">
+                <h3>{{ cards.taxa_reabertura }}<sup class="fs-6">%</sup></h3>
+                <p>Taxa de Reabertura</p>
+            </div>
+            <i class="small-box-icon bi bi-arrow-repeat"></i>
+            <span class="small-box-footer">Meta &le; {{ meta_reabertura }}%</span>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card-kpi bg-white">
-            <div class="rotulo">Total de Horas</div>
-            <div class="valor">{{ cards.total_horas }}h</div>
-            <span class="text-muted small">{{ cards.total_incidentes }} incidentes / {{ cards.total_requisicoes }} requisicoes</span>
-        </div>
-    </div>
-</div>
-
-<div class="row g-3 mb-4">
-    <div class="col-lg-4">
-        <div class="card p-3">
-            <h6>SLA por Prioridade</h6>
-            <canvas id="graficoPrioridade" height="220"></canvas>
-        </div>
-    </div>
-    <div class="col-lg-4">
-        <div class="card p-3">
-            <h6>Distribuicao SLA</h6>
-            <canvas id="graficoPizza" height="220"></canvas>
-        </div>
-    </div>
-    <div class="col-lg-4">
-        <div class="card p-3">
-            <h6>Horas por Grupo de Atribuicao</h6>
-            <canvas id="graficoGrupo" height="220"></canvas>
+    <div class="col-lg-3 col-6">
+        <div class="small-box text-bg-primary">
+            <div class="inner">
+                <h3>{{ cards.total_horas }}<sup class="fs-6">h</sup></h3>
+                <p>Total de Horas</p>
+            </div>
+            <i class="small-box-icon bi bi-clock-history"></i>
+            <span class="small-box-footer">{{ cards.total_incidentes }} incidentes / {{ cards.total_requisicoes }} requisicoes</span>
         </div>
     </div>
 </div>
 
-<div class="card p-3">
-    <h6>Top 10 Incidentes em Atraso</h6>
-    <div class="table-responsive">
-        <table class="table table-sm table-hover align-middle">
+<div class="row">
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header"><h3 class="card-title">SLA por Prioridade</h3></div>
+            <div class="card-body"><div id="graficoPrioridade"></div></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header"><h3 class="card-title">Distribuicao SLA</h3></div>
+            <div class="card-body"><div id="graficoPizza"></div></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header"><h3 class="card-title">Horas por Grupo de Atribuicao</h3></div>
+            <div class="card-body"><div id="graficoGrupo"></div></div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><h3 class="card-title">Top 10 Incidentes em Atraso</h3></div>
+    <div class="card-body table-responsive p-0">
+        <table class="table table-striped table-hover mb-0">
             <thead>
                 <tr>
                     <th>Numero</th>
@@ -96,10 +122,10 @@
                     <td>{{ i.grupo_atribuicao }}</td>
                     <td>{{ i.duracao_horas }}</td>
                     <td>{{ i.meta_sla_horas }}</td>
-                    <td class="status-atraso">{{ i.status_sla }}</td>
+                    <td><span class="badge text-bg-danger">{{ i.status_sla }}</span></td>
                 </tr>
                 {% else %}
-                <tr><td colspan="6" class="text-center text-muted">Nenhum incidente em atraso.</td></tr>
+                <tr><td colspan="6" class="text-center text-muted py-3">Nenhum incidente em atraso.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -112,42 +138,40 @@
 {% block scripts %}
 {% if competencia %}
 <script>
-const corPaleta = {
-    azul: '#16336e',
-    roxo: '#6c3ce9',
-    verde: '#16a34a',
-    vermelho: '#dc2626',
+const paleta = {
+    verde: '#28a745',
+    vermelho: '#dc3545',
+    roxo: '#6f42c1',
 };
 
-new Chart(document.getElementById('graficoPrioridade'), {
-    type: 'bar',
-    data: {
-        labels: {{ sla_prioridade.labels | tojson }},
-        datasets: [
-            { label: 'No Prazo', data: {{ sla_prioridade.no_prazo | tojson }}, backgroundColor: corPaleta.verde },
-            { label: 'Atraso', data: {{ sla_prioridade.atraso | tojson }}, backgroundColor: corPaleta.vermelho },
-        ]
-    },
-    options: { responsive: true, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
-});
+new ApexCharts(document.querySelector('#graficoPrioridade'), {
+    chart: { type: 'bar', height: 280, stacked: true, toolbar: { show: false } },
+    series: [
+        { name: 'No Prazo', data: {{ sla_prioridade.no_prazo | tojson }} },
+        { name: 'Atraso', data: {{ sla_prioridade.atraso | tojson }} },
+    ],
+    xaxis: { categories: {{ sla_prioridade.labels | tojson }} },
+    colors: [paleta.verde, paleta.vermelho],
+    legend: { position: 'bottom' },
+    dataLabels: { enabled: false },
+}).render();
 
-new Chart(document.getElementById('graficoPizza'), {
-    type: 'doughnut',
-    data: {
-        labels: {{ sla_pizza.labels | tojson }},
-        datasets: [{ data: {{ sla_pizza.valores | tojson }}, backgroundColor: [corPaleta.verde, corPaleta.vermelho] }]
-    },
-    options: { responsive: true }
-});
+new ApexCharts(document.querySelector('#graficoPizza'), {
+    chart: { type: 'donut', height: 280 },
+    series: {{ sla_pizza.valores | tojson }},
+    labels: {{ sla_pizza.labels | tojson }},
+    colors: [paleta.verde, paleta.vermelho],
+    legend: { position: 'bottom' },
+}).render();
 
-new Chart(document.getElementById('graficoGrupo'), {
-    type: 'bar',
-    data: {
-        labels: {{ horas_grupo.labels | tojson }},
-        datasets: [{ label: 'Horas', data: {{ horas_grupo.valores | tojson }}, backgroundColor: corPaleta.roxo }]
-    },
-    options: { responsive: true, indexAxis: 'y', scales: { x: { beginAtZero: true } } }
-});
+new ApexCharts(document.querySelector('#graficoGrupo'), {
+    chart: { type: 'bar', height: 280, toolbar: { show: false } },
+    plotOptions: { bar: { horizontal: true } },
+    series: [{ name: 'Horas', data: {{ horas_grupo.valores | tojson }} }],
+    xaxis: { categories: {{ horas_grupo.labels | tojson }} },
+    colors: [paleta.roxo],
+    dataLabels: { enabled: false },
+}).render();
 </script>
 {% endif %}
 {% endblock %}

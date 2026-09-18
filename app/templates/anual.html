@@ -1,146 +1,169 @@
 {% extends "base.html" %}
 {% block titulo %}Parametro Anual{% endblock %}
+{% block titulo_pagina %}Parametro Anual{% endblock %}
+{% block breadcrumb_atual %}Anual{% endblock %}
+
 {% block content %}
 
-<form method="get" action="/anual" class="row g-2 align-items-end mb-4">
-    <div class="col-auto">
-        <label class="form-label mb-0">Ano</label>
-        <select class="form-select" name="ano" onchange="this.form.submit()">
-            {% for a in anos_disponiveis %}
-            <option value="{{ a }}" {% if a == ano_atual %}selected{% endif %}>{{ a }}</option>
-            {% endfor %}
-        </select>
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <form method="get" action="/anual" class="row g-2 align-items-center">
+            <div class="col-auto"><label class="col-form-label">Ano</label></div>
+            <div class="col-auto">
+                <select class="form-select" name="ano" onchange="this.form.submit()">
+                    {% for a in anos_disponiveis %}
+                    <option value="{{ a }}" {% if a == ano_atual %}selected{% endif %}>{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
     </div>
-</form>
+</div>
 
-<div class="row g-3 mb-4">
+<div class="row">
     {% for r in resumo_trimestral %}
-    <div class="col-md-3">
-        <div class="card-kpi {{ 'border border-2' if r.trimestre == trimestre_atual }}">
-            <div class="rotulo">Q{{ r.trimestre }} / {{ ano_atual }}</div>
-            <div class="valor">{{ r.horas }}h</div>
-            <div class="small text-muted">SLA {{ r.eficiencia_sla }}% · Aging {{ r.aging_pct }}% · Reab. {{ r.reabertura_pct }}%</div>
-            <a href="/anual?ano={{ ano_atual }}&trimestre={{ r.trimestre }}" class="btn btn-sm btn-outline-secondary mt-2">Ver baseline</a>
+    <div class="col-lg-3 col-6">
+        <div class="small-box {{ 'text-bg-primary' if r.trimestre == trimestre_atual else 'text-bg-secondary' }}">
+            <div class="inner">
+                <h3>{{ r.horas }}<sup class="fs-6">h</sup></h3>
+                <p>Q{{ r.trimestre }} / {{ ano_atual }} &middot; SLA {{ r.eficiencia_sla }}%</p>
+            </div>
+            <i class="small-box-icon bi bi-calendar3-range"></i>
+            <a href="/anual?ano={{ ano_atual }}&trimestre={{ r.trimestre }}" class="small-box-footer">
+                Ver baseline <i class="bi bi-arrow-right"></i>
+            </a>
         </div>
     </div>
     {% endfor %}
 </div>
 
-<div class="row g-3 mb-4">
+<div class="row">
     <div class="col-lg-5">
-        <div class="card p-4">
-            <h6 class="mb-3">Baseline Trimestral de Melhorias — Q{{ trimestre_atual }}/{{ ano_atual }}</h6>
-            <form method="post" action="/anual/baseline" class="row g-2">
-                <input type="hidden" name="trimestre" value="{{ chave_trimestre }}">
-                <input type="hidden" name="ano" value="{{ ano_atual }}">
-                <input type="hidden" name="trimestre_num" value="{{ trimestre_atual }}">
-                <div class="col-6">
-                    <label class="form-label small">Saldo Anterior Trimestral (h)</label>
-                    <input type="number" step="0.01" class="form-control" name="saldo_anterior" value="{{ saldo_anterior }}">
+        <div class="card mb-4">
+            <div class="card-header"><h3 class="card-title">Baseline Trimestral de Melhorias — Q{{ trimestre_atual }}/{{ ano_atual }}</h3></div>
+            <div class="card-body">
+                <form method="post" action="/anual/baseline" class="row g-2">
+                    <input type="hidden" name="trimestre" value="{{ chave_trimestre }}">
+                    <input type="hidden" name="ano" value="{{ ano_atual }}">
+                    <input type="hidden" name="trimestre_num" value="{{ trimestre_atual }}">
+                    <div class="col-6">
+                        <label class="form-label small">Saldo Anterior Trimestral (h)</label>
+                        <input type="number" step="0.01" class="form-control" name="saldo_anterior" value="{{ saldo_anterior }}">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small">Horas Estimadas em Melhorias no Periodo</label>
+                        <input type="text" class="form-control" value="{{ horas_estimadas_periodo }}" disabled>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-save me-1"></i>Atualizar Saldo Anterior
+                        </button>
+                    </div>
+                </form>
+                <hr>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-muted">Saldo Atualizado</span>
+                    <strong class="fs-4 text-primary">{{ saldo_atualizado }}h</strong>
                 </div>
-                <div class="col-6">
-                    <label class="form-label small">Horas Estimadas em Melhorias no Periodo</label>
-                    <input type="text" class="form-control" value="{{ horas_estimadas_periodo }}" disabled>
-                </div>
-                <div class="col-12">
-                    <button type="submit" class="btn btn-corecast btn-sm">Atualizar Saldo Anterior</button>
-                </div>
-            </form>
-            <hr>
-            <div class="d-flex justify-content-between">
-                <span class="text-muted">Saldo Atualizado</span>
-                <strong class="fs-5">{{ saldo_atualizado }}h</strong>
+                <div class="form-text">Saldo Atualizado = MAX(0, Saldo Anterior − Horas Estimadas no Periodo)</div>
             </div>
-            <div class="form-text">Saldo Atualizado = MAX(0, Saldo Anterior - Horas Estimadas no Periodo)</div>
         </div>
     </div>
     <div class="col-lg-7">
-        <div class="card p-3">
-            <h6>Evolucao Mensal — {{ ano_atual }}</h6>
-            <canvas id="graficoEvolucao" height="220"></canvas>
+        <div class="card mb-4">
+            <div class="card-header"><h3 class="card-title">Evolucao Mensal — {{ ano_atual }}</h3></div>
+            <div class="card-body"><div id="graficoEvolucao"></div></div>
         </div>
     </div>
 </div>
 
-<div class="card p-3 mb-4">
-    <h6 class="mb-3">Melhorias do Trimestre Q{{ trimestre_atual }}/{{ ano_atual }}</h6>
-    {% if competencias_trimestre %}
-    <form method="post" action="/anual/melhorias" class="row g-2 align-items-end mb-3">
-        <input type="hidden" name="ano" value="{{ ano_atual }}">
-        <input type="hidden" name="trimestre_num" value="{{ trimestre_atual }}">
-        <div class="col-md-2">
-            <label class="form-label small">Competencia</label>
-            <select class="form-select form-select-sm" name="competencia_id" required>
-                {% for c in competencias_trimestre %}
-                <option value="{{ c.id }}">{{ c.rotulo }}</option>
-                {% endfor %}
-            </select>
+<div class="card mb-4">
+    <div class="card-header">
+        <h3 class="card-title">Melhorias do Trimestre Q{{ trimestre_atual }}/{{ ano_atual }}</h3>
+    </div>
+    <div class="card-body">
+        {% if competencias_trimestre %}
+        <form method="post" action="/anual/melhorias" class="row g-2 align-items-end mb-3">
+            <input type="hidden" name="ano" value="{{ ano_atual }}">
+            <input type="hidden" name="trimestre_num" value="{{ trimestre_atual }}">
+            <div class="col-md-2">
+                <label class="form-label small">Competencia</label>
+                <select class="form-select form-select-sm" name="competencia_id" required>
+                    {% for c in competencias_trimestre %}
+                    <option value="{{ c.id }}">{{ c.rotulo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">RITM</label>
+                <input type="text" class="form-control form-control-sm" name="ritm_numero">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Aplicacao</label>
+                <input type="text" class="form-control form-control-sm" name="aplicacao">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Horas Estimadas</label>
+                <input type="number" step="0.01" class="form-control form-control-sm" name="horas_estimadas" value="0">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Status</label>
+                <select class="form-select form-select-sm" name="status">
+                    <option>Em Andamento</option>
+                    <option>Em Homologacao</option>
+                    <option>Finalizada</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-plus-lg me-1"></i>Adicionar
+                </button>
+            </div>
+        </form>
+        {% else %}
+        <p class="text-muted small">Cadastre uma competencia neste trimestre para registrar melhorias.</p>
+        {% endif %}
+        <div class="table-responsive">
+            <table class="table table-sm table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>RITM</th><th>Aplicacao</th><th>Horas Estimadas</th><th>Status</th><th>Solicitante</th><th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in melhorias_periodo %}
+                    <tr>
+                        <td>{{ m.ritm_numero }}</td>
+                        <td>{{ m.aplicacao }}</td>
+                        <td>{{ m.horas_estimadas }}</td>
+                        <td><span class="badge text-bg-secondary">{{ m.status }}</span></td>
+                        <td>{{ m.solicitante }}</td>
+                        <td class="text-end">
+                            <form method="post" action="/anual/melhorias/{{ m.id }}/excluir" onsubmit="return confirm('Remover esta melhoria?');">
+                                <input type="hidden" name="ano" value="{{ ano_atual }}">
+                                <input type="hidden" name="trimestre_num" value="{{ trimestre_atual }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center text-muted py-3">Nenhuma melhoria registrada neste periodo.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-        <div class="col-md-2">
-            <label class="form-label small">RITM</label>
-            <input type="text" class="form-control form-control-sm" name="ritm_numero">
-        </div>
-        <div class="col-md-2">
-            <label class="form-label small">Aplicacao</label>
-            <input type="text" class="form-control form-control-sm" name="aplicacao">
-        </div>
-        <div class="col-md-2">
-            <label class="form-label small">Horas Estimadas</label>
-            <input type="number" step="0.01" class="form-control form-control-sm" name="horas_estimadas" value="0">
-        </div>
-        <div class="col-md-2">
-            <label class="form-label small">Status</label>
-            <select class="form-select form-select-sm" name="status">
-                <option>Em Andamento</option>
-                <option>Em Homologacao</option>
-                <option>Finalizada</option>
-            </select>
-        </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-corecast btn-sm w-100">Adicionar</button>
-        </div>
-    </form>
-    {% else %}
-    <p class="text-muted small">Cadastre uma competencia neste trimestre para registrar melhorias.</p>
-    {% endif %}
-    <div class="table-responsive">
-        <table class="table table-sm">
-            <thead>
-                <tr>
-                    <th>RITM</th><th>Aplicacao</th><th>Horas Estimadas</th><th>Status</th><th>Solicitante</th><th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for m in melhorias_periodo %}
-                <tr>
-                    <td>{{ m.ritm_numero }}</td>
-                    <td>{{ m.aplicacao }}</td>
-                    <td>{{ m.horas_estimadas }}</td>
-                    <td>{{ m.status }}</td>
-                    <td>{{ m.solicitante }}</td>
-                    <td class="text-end">
-                        <form method="post" action="/anual/melhorias/{{ m.id }}/excluir" onsubmit="return confirm('Remover esta melhoria?');">
-                            <input type="hidden" name="ano" value="{{ ano_atual }}">
-                            <input type="hidden" name="trimestre_num" value="{{ trimestre_atual }}">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
-                        </form>
-                    </td>
-                </tr>
-                {% else %}
-                <tr><td colspan="6" class="text-center text-muted">Nenhuma melhoria registrada neste periodo.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
     </div>
 </div>
 
-<div class="card p-3">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <h6 class="mb-0">Dados Mensais Detalhados</h6>
-        <a href="/competencias" class="btn btn-sm btn-outline-secondary">Gerenciar competencias (CRUD)</a>
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="card-title">Dados Mensais Detalhados</h3>
+        <a href="/competencias" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-gear me-1"></i>Gerenciar competencias (CRUD)
+        </a>
     </div>
-    <div class="table-responsive">
-        <table class="table table-sm table-hover align-middle">
+    <div class="card-body table-responsive p-0">
+        <table class="table table-striped table-hover mb-0">
             <thead>
                 <tr>
                     <th>Competencia</th>
@@ -157,7 +180,7 @@
                 {% for l in linhas_mensais %}
                 <tr>
                     <td>{{ l.competencia.rotulo }}</td>
-                    <td><span class="badge {{ 'status-aberta' if l.competencia.status == 'Aberta' else 'status-fechada' }}">{{ l.competencia.status }}</span></td>
+                    <td><span class="badge {{ 'text-bg-success' if l.competencia.status == 'Aberta' else 'text-bg-secondary' }}">{{ l.competencia.status }}</span></td>
                     <td>{{ l.competencia.total_horas }}</td>
                     <td>{{ l.competencia.total_incidentes }}</td>
                     <td>{{ l.competencia.total_requisicoes }}</td>
@@ -166,7 +189,7 @@
                     <td>{{ l.reabertura_pct }}%</td>
                 </tr>
                 {% else %}
-                <tr><td colspan="8" class="text-center text-muted">Nenhuma competencia cadastrada para {{ ano_atual }}.</td></tr>
+                <tr><td colspan="8" class="text-center text-muted py-3">Nenhuma competencia cadastrada para {{ ano_atual }}.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -177,23 +200,22 @@
 
 {% block scripts %}
 <script>
-new Chart(document.getElementById('graficoEvolucao'), {
-    type: 'line',
-    data: {
-        labels: {{ grafico_evolucao.labels | tojson }},
-        datasets: [
-            { label: 'Eficiencia SLA (%)', data: {{ grafico_evolucao.eficiencia_sla | tojson }}, borderColor: '#16a34a', tension: 0.3 },
-            { label: 'Aging 8 Dias (%)', data: {{ grafico_evolucao.aging_pct | tojson }}, borderColor: '#6c3ce9', tension: 0.3 },
-            { label: 'Total Horas', data: {{ grafico_evolucao.total_horas | tojson }}, borderColor: '#16336e', tension: 0.3, yAxisID: 'y1' },
-        ]
-    },
-    options: {
-        responsive: true,
-        scales: {
-            y: { beginAtZero: true, max: 100 },
-            y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } },
-        }
-    }
-});
+new ApexCharts(document.querySelector('#graficoEvolucao'), {
+    chart: { height: 300, type: 'line', toolbar: { show: false } },
+    series: [
+        { name: 'Eficiencia SLA (%)', type: 'line', data: {{ grafico_evolucao.eficiencia_sla | tojson }} },
+        { name: 'Aging 8 Dias (%)', type: 'line', data: {{ grafico_evolucao.aging_pct | tojson }} },
+        { name: 'Total Horas', type: 'column', data: {{ grafico_evolucao.total_horas | tojson }} },
+    ],
+    xaxis: { categories: {{ grafico_evolucao.labels | tojson }} },
+    yaxis: [
+        { seriesName: 'Eficiencia SLA (%)', min: 0, max: 100, title: { text: '%' } },
+        { seriesName: 'Aging 8 Dias (%)', show: false, min: 0, max: 100 },
+        { seriesName: 'Total Horas', opposite: true, title: { text: 'Horas' } },
+    ],
+    colors: ['#28a745', '#6f42c1', '#0d6efd'],
+    stroke: { width: [3, 3, 0], curve: 'smooth' },
+    legend: { position: 'bottom' },
+}).render();
 </script>
 {% endblock %}

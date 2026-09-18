@@ -1,26 +1,33 @@
 {% extends "base.html" %}
 {% block titulo %}Competencias{% endblock %}
+{% block titulo_pagina %}Competencias{% endblock %}
+{% block breadcrumb_atual %}Competencias{% endblock %}
+
 {% block content %}
 
 <div class="row">
     <div class="col-lg-4">
-        <div class="card p-4 mb-4">
-            <h6 class="mb-3">Nova Competencia</h6>
-            <form method="post" action="/competencias">
-                <div class="mb-3">
-                    <label class="form-label">Mes/Ano</label>
-                    <input type="month" class="form-control" name="ano_mes" required>
-                </div>
-                <button type="submit" class="btn btn-corecast w-100">Criar</button>
-            </form>
+        <div class="card mb-4">
+            <div class="card-header"><h3 class="card-title">Nova Competencia</h3></div>
+            <div class="card-body">
+                <form method="post" action="/competencias">
+                    <div class="mb-3">
+                        <label class="form-label">Mes/Ano</label>
+                        <input type="month" class="form-control" name="ano_mes" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-plus-lg me-1"></i>Criar
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 
     <div class="col-lg-8">
-        <div class="card p-3">
-            <h6 class="mb-3">Bases Mensais Cadastradas</h6>
-            <div class="table-responsive">
-                <table class="table table-sm table-hover align-middle">
+        <div class="card mb-4">
+            <div class="card-header"><h3 class="card-title">Bases Mensais Cadastradas</h3></div>
+            <div class="card-body table-responsive p-0">
+                <table class="table table-striped table-hover mb-0">
                     <thead>
                         <tr>
                             <th>Competencia</th>
@@ -36,23 +43,29 @@
                         {% for c in competencias %}
                         <tr>
                             <td>{{ c.rotulo }}</td>
-                            <td><span class="badge {{ 'status-aberta' if c.status == 'Aberta' else 'status-fechada' }}">{{ c.status }}</span></td>
+                            <td><span class="badge {{ 'text-bg-success' if c.status == 'Aberta' else 'text-bg-secondary' }}">{{ c.status }}</span></td>
                             <td>{{ c.total_horas }}</td>
                             <td>{{ c.total_incidentes }}</td>
                             <td>{{ c.total_requisicoes }}</td>
                             <td>{{ c.sla_cumprimento }}%</td>
                             <td class="text-end">
-                                <a href="/dashboard?competencia_id={{ c.id }}" class="btn btn-sm btn-outline-secondary">Ver</a>
+                                <a href="/dashboard?competencia_id={{ c.id }}" class="btn btn-sm btn-outline-secondary" title="Ver dashboard">
+                                    <i class="bi bi-eye"></i>
+                                </a>
                                 <form method="post" action="/competencias/{{ c.id }}/status" class="d-inline">
-                                    <button type="submit" class="btn btn-sm btn-outline-primary">{{ 'Fechar' if c.status == 'Aberta' else 'Reabrir' }}</button>
+                                    <button type="submit" class="btn btn-sm btn-outline-primary" title="{{ 'Fechar' if c.status == 'Aberta' else 'Reabrir' }}">
+                                        <i class="bi {{ 'bi-lock' if c.status == 'Aberta' else 'bi-unlock' }}"></i>
+                                    </button>
                                 </form>
                                 <form method="post" action="/competencias/{{ c.id }}/excluir" class="d-inline" onsubmit="return confirm('Excluir a competencia {{ c.rotulo }} e todos os dados vinculados? Esta acao nao pode ser desfeita.');">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
                                 </form>
                             </td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="7" class="text-center text-muted">Nenhuma competencia cadastrada.</td></tr>
+                        <tr><td colspan="7" class="text-center text-muted py-3">Nenhuma competencia cadastrada.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>

@@ -1,62 +1,71 @@
 {% extends "base.html" %}
 {% block titulo %}Importar{% endblock %}
+{% block titulo_pagina %}Importar Bases{% endblock %}
+{% block breadcrumb_atual %}Importar{% endblock %}
+
 {% block content %}
 <div class="row">
     <div class="col-lg-8">
-        <div class="card p-4 mb-4">
-            <h5 class="mb-3">Importacao de Bases Mensais</h5>
-            <form method="post" action="/importar" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <label class="form-label">Competencia existente</label>
-                    <select class="form-select" name="competencia_id">
-                        <option value="">-- Selecione --</option>
-                        {% for c in competencias %}
-                        <option value="{{ c.id }}">{{ c.rotulo }} ({{ c.status }})</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Ou crie uma nova competencia</label>
-                    <input type="month" class="form-control" name="nova_competencia_ano_mes">
-                    <div class="form-text">Preencher este campo tem prioridade sobre a selecao acima.</div>
-                </div>
+        <div class="card mb-4">
+            <div class="card-header"><h3 class="card-title">Importacao de Bases Mensais</h3></div>
+            <div class="card-body">
+                <form method="post" action="/importar" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">Competencia existente</label>
+                        <select class="form-select" name="competencia_id">
+                            <option value="">-- Selecione --</option>
+                            {% for c in competencias %}
+                            <option value="{{ c.id }}">{{ c.rotulo }} ({{ c.status }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ou crie uma nova competencia</label>
+                        <input type="month" class="form-control" name="nova_competencia_ano_mes">
+                        <div class="form-text">Preencher este campo tem prioridade sobre a selecao acima.</div>
+                    </div>
 
-                <hr>
+                    <hr>
 
-                <div class="mb-3">
-                    <label class="form-label">Consolidado Dados_RAC (opcional, tem precedencia)</label>
-                    <input type="file" class="form-control" name="rac_file" accept=".xlsx">
-                </div>
+                    <div class="mb-3">
+                        <label class="form-label">Consolidado Dados_RAC (opcional, tem precedencia)</label>
+                        <input type="file" class="form-control" name="rac_file" accept=".xlsx">
+                    </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Horas Tereos (Azure DevOps)</label>
-                    <input type="file" class="form-control" name="horas_file" accept=".csv,.xlsx">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Incidentes (ServiceNow - INC)</label>
-                    <input type="file" class="form-control" name="inc_file" accept=".csv,.xlsx">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Requisicoes (ServiceNow - RITM)</label>
-                    <input type="file" class="form-control" name="req_file" accept=".csv,.xlsx">
-                </div>
+                    <div class="mb-3">
+                        <label class="form-label">Horas Tereos (Azure DevOps)</label>
+                        <input type="file" class="form-control" name="horas_file" accept=".csv,.xlsx">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Incidentes (ServiceNow - INC)</label>
+                        <input type="file" class="form-control" name="inc_file" accept=".csv,.xlsx">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Requisicoes (ServiceNow - RITM)</label>
+                        <input type="file" class="form-control" name="req_file" accept=".csv,.xlsx">
+                    </div>
 
-                <button type="submit" class="btn btn-corecast">Processar Importacao</button>
-            </form>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-cloud-upload me-1"></i>Processar Importacao
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 
     <div class="col-lg-4">
-        <div class="card p-4">
-            <h6 class="mb-3">Regras aplicadas automaticamente</h6>
-            <ul class="small text-muted mb-0">
-                <li>Limpeza idempotente dos dados anteriores da competencia.</li>
-                <li>Leitura das colunas por nome de cabecalho (nunca por posicao).</li>
-                <li>Filtro de horas pelo Iteration Path do mes da competencia.</li>
-                <li>Cruzamento deterministico via regex do numero do chamado.</li>
-                <li>Normalizacao do grupo de atribuicao (remocao de prefixos crus).</li>
-                <li>Calculo de meta de SLA, status e aging de 8 dias por incidente.</li>
-            </ul>
+        <div class="card mb-4">
+            <div class="card-header"><h3 class="card-title">Regras aplicadas automaticamente</h3></div>
+            <div class="card-body">
+                <ul class="small text-muted mb-0 ps-3">
+                    <li>Limpeza idempotente dos dados anteriores da competencia.</li>
+                    <li>Leitura das colunas por nome de cabecalho (nunca por posicao).</li>
+                    <li>Filtro de horas pelo Iteration Path do mes da competencia.</li>
+                    <li>Cruzamento deterministico via regex do numero do chamado.</li>
+                    <li>Normalizacao do grupo de atribuicao (remocao de prefixos crus).</li>
+                    <li>Calculo de meta de SLA, status e aging de 8 dias por incidente.</li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>

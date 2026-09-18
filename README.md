@@ -2,7 +2,7 @@
 
 Portal executivo de gestão de atendimentos AMS, controle de esforço e apuração de SLA para o contrato **Cast Group / Tereos**. Substitui um sistema legado em PHP que apresentava erros matemáticos de SLA, duplicidade não determinística de horas e falhas de leitura por colunas fixas.
 
-Stack: **Python 3.11 · FastAPI · SQLAlchemy · PostgreSQL 15 · Pandas/OpenPyXL · Jinja2 + Bootstrap 5 + Chart.js · Docker Compose**.
+Stack: **Python 3.11 · FastAPI · SQLAlchemy · PostgreSQL 15 · Pandas/OpenPyXL · Jinja2 + AdminLTE 4 (Bootstrap 5) + ApexCharts · Docker Compose**.
 
 ---
 
@@ -53,7 +53,7 @@ O sistema legado em PHP lia colunas por letra fixa (`B2`, `H15`...), o que quebr
 ## Arquitetura
 
 ```
-Navegador ── Jinja2/Bootstrap5/Chart.js (SSR, sem SPA)
+Navegador ── Jinja2 + AdminLTE 4 (Bootstrap 5) + ApexCharts (SSR, sem SPA)
      │
      ▼
 FastAPI (app/main.py)
@@ -177,7 +177,7 @@ corecastpy/
 │   │   └── export_service.py    # geração do Excel Dados_RAC — ExportService
 │   ├── routers/                 # auth, importador, dashboard, anual, competencias, exportar
 │   ├── templates/                # Jinja2 (base, login, importar, dashboard, anual, competencias)
-│   ├── static/css/custom.css     # paleta corporativa (azul escuro / roxo / verde / vermelho)
+│   ├── static/css/custom.css     # paleta corporativa sobreposta ao tema padrao do AdminLTE 4
 │   └── templates_engine.py      # instância compartilhada de Jinja2Templates
 ├── docker-compose.yml
 ├── Dockerfile

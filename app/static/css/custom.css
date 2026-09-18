@@ -1,111 +1,33 @@
+/* Paleta corporativa CoreCast sobre o tema padrao do AdminLTE 4 / Bootstrap 5.
+   Mantemos os componentes nativos do AdminLTE (sidebar, small-box, cards) e
+   apenas sobrescrevemos a cor de marca (azul escuro/roxo). Verde e vermelho
+   das metas de SLA usam as cores padrao do Bootstrap (success/danger). */
 :root {
-    --cc-azul-escuro: #0f2557;
-    --cc-azul: #16336e;
-    --cc-roxo: #6c3ce9;
-    --cc-verde: #16a34a;
-    --cc-vermelho: #dc2626;
-    --cc-fundo: #f4f6fb;
-    --cc-texto: #1c2333;
+    --bs-primary: #4a2fb5;
+    --bs-primary-rgb: 74, 47, 181;
+    --bs-primary-text-emphasis: #2e1b73;
+    --bs-primary-bg-subtle: #ece7fa;
+    --bs-primary-border-subtle: #c9bdf0;
 }
 
-body {
-    background-color: var(--cc-fundo);
-    color: var(--cc-texto);
+.app-sidebar {
+    background: linear-gradient(180deg, #0f2557 0%, #1a1a2e 100%) !important;
 }
 
-.navbar-corecast {
-    background: linear-gradient(90deg, var(--cc-azul-escuro), var(--cc-roxo));
+.brand-link .brand-text,
+.brand-link i {
+    color: #ffffff;
 }
 
-.navbar-corecast .nav-link {
-    color: rgba(255, 255, 255, 0.85) !important;
-    font-weight: 500;
+.small-box .small-box-icon {
+    opacity: 0.35;
 }
 
-.navbar-corecast .nav-link.active,
-.navbar-corecast .nav-link:hover {
-    color: #ffffff !important;
+.login-page {
+    background: linear-gradient(135deg, #0f2557, #4a2fb5);
 }
 
-.navbar-corecast .navbar-brand {
-    color: #ffffff !important;
+.login-logo a {
+    color: #ffffff;
     font-weight: 700;
-    letter-spacing: 0.5px;
-}
-
-.card-kpi {
-    border: none;
-    border-radius: 14px;
-    box-shadow: 0 4px 14px rgba(15, 37, 87, 0.08);
-    padding: 1.25rem;
-    height: 100%;
-}
-
-.card-kpi .valor {
-    font-size: 2rem;
-    font-weight: 700;
-}
-
-.card-kpi .rotulo {
-    color: #6b7280;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-}
-
-.badge-meta-ok {
-    background-color: var(--cc-verde);
-}
-
-.badge-meta-alerta {
-    background-color: var(--cc-vermelho);
-}
-
-.status-aberta {
-    background-color: var(--cc-verde);
-}
-
-.status-fechada {
-    background-color: #6b7280;
-}
-
-.status-no-prazo {
-    color: var(--cc-verde);
-    font-weight: 600;
-}
-
-.status-atraso {
-    color: var(--cc-vermelho);
-    font-weight: 600;
-}
-
-.card {
-    border-radius: 14px;
-}
-
-.btn-corecast {
-    background-color: var(--cc-roxo);
-    border-color: var(--cc-roxo);
-    color: #fff;
-}
-
-.btn-corecast:hover {
-    background-color: #5a2fd0;
-    border-color: #5a2fd0;
-    color: #fff;
-}
-
-.login-wrapper {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, var(--cc-azul-escuro), var(--cc-roxo));
-}
-
-.login-card {
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-    max-width: 400px;
-    width: 100%;
 }
