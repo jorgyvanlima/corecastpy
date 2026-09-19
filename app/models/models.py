@@ -88,6 +88,7 @@ class Incidente(Base):
     contagem_reaberturas = Column(Integer, default=0)
     horas_consumidas = Column(Numeric(10, 2), default=0)
     descricao_resumida = Column(Text)
+    tempo_repasse_minutos = Column(Numeric(10, 2))  # N1 -> N2; NULL quando o export nao traz o dado
 
     competencia = relationship("Competencia", back_populates="incidentes")
 

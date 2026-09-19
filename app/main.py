@@ -3,6 +3,7 @@ from fastapi.exception_handlers import http_exception_handler
 from fastapi.exceptions import HTTPException
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config.database import Base, SessionLocal, engine
@@ -35,6 +36,8 @@ async def redirecionar_nao_autenticado(request: Request, exc: HTTPException):
 @app.on_event("startup")
 def iniciar_aplicacao():
     Base.metadata.create_all(bind=engine)
+    with engine.begin() as conexao:
+        conexao.execute(text("ALTER TABLE incidentes ADD COLUMN IF NOT EXISTS tempo_repasse_minutos NUMERIC(10,2)"))
     db = SessionLocal()
     try:
         if db.query(Usuario).count() == 0:

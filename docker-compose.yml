@@ -8,6 +8,7 @@ services:
       - SECRET_KEY=${SECRET_KEY:-corecast-dev-secret-change-me}
       - SLA_META_P3_HORAS=${SLA_META_P3_HORAS:-12}
       - SLA_META_P4_HORAS=${SLA_META_P4_HORAS:-32}
+      - LIMITE_REPASSE_N2_MINUTOS=${LIMITE_REPASSE_N2_MINUTOS:-30}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@corecast.local}
       - ADMIN_SENHA=${ADMIN_SENHA:-admin123}
     depends_on:

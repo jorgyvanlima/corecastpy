@@ -63,7 +63,8 @@ CREATE TABLE incidentes (
     dentro_aging_8dias BOOLEAN DEFAULT TRUE,
     contagem_reaberturas INT DEFAULT 0,
     horas_consumidas NUMERIC(10,2) DEFAULT 0,
-    descricao_resumida TEXT
+    descricao_resumida TEXT,
+    tempo_repasse_minutos NUMERIC(10,2) -- Handoff N1 -> N2 (NULL se o export nao trouxer o dado)
 );
 
 -- 5. Requisicoes (ServiceNow - RITM)

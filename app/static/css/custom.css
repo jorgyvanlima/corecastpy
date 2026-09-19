@@ -1,33 +1,50 @@
-/* Paleta corporativa CoreCast sobre o tema padrao do AdminLTE 4 / Bootstrap 5.
-   Mantemos os componentes nativos do AdminLTE (sidebar, small-box, cards) e
-   apenas sobrescrevemos a cor de marca (azul escuro/roxo). Verde e vermelho
-   das metas de SLA usam as cores padrao do Bootstrap (success/danger). */
+/* CoreCast - tema visual sobre AdminLTE 4 / Bootstrap 5.3 (claro e escuro via data-bs-theme). */
 :root {
-    --bs-primary: #4a2fb5;
-    --bs-primary-rgb: 74, 47, 181;
-    --bs-primary-text-emphasis: #2e1b73;
-    --bs-primary-bg-subtle: #ece7fa;
-    --bs-primary-border-subtle: #c9bdf0;
+    --cc-indigo: #6366f1; --cc-violeta: #8b5cf6; --cc-ciano: #06b6d4; --cc-esmeralda: #10b981;
+    --cc-ambar: #f59e0b; --cc-rosa: #f43f5e;
+    --bs-primary: #6366f1; --bs-primary-rgb: 99, 102, 241;
+    --bs-body-font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+[data-bs-theme="light"] {
+    --cc-fundo: #eef1f8; --cc-card: #ffffff; --cc-borda: rgba(15, 23, 42, .08); --cc-suave: #64748b;
+    --cc-sombra: 0 6px 24px rgba(30, 41, 59, .07);
+}
+[data-bs-theme="dark"] {
+    --cc-fundo: #070b16; --cc-card: #0f172a; --cc-borda: rgba(148, 163, 184, .16); --cc-suave: #94a3b8;
+    --cc-sombra: 0 8px 30px rgba(0, 0, 0, .45);
+    --bs-body-bg: #0b1120; --bs-body-bg-rgb: 11, 17, 32; --bs-tertiary-bg: #070b16; --bs-tertiary-bg-rgb: 7, 11, 22;
 }
 
-.app-sidebar {
-    background: linear-gradient(180deg, #0f2557 0%, #1a1a2e 100%) !important;
+body.bg-body-tertiary {
+    background:
+        radial-gradient(900px 500px at 85% -10%, rgba(99, 102, 241, .18), transparent 60%),
+        radial-gradient(700px 420px at -5% 30%, rgba(6, 182, 212, .10), transparent 60%),
+        var(--cc-fundo) !important;
+    background-attachment: fixed !important;
 }
 
-.brand-link .brand-text,
-.brand-link i {
-    color: #ffffff;
-}
+/* ---------- Casca: header, sidebar, rodape ---------- */
+.app-header { background: color-mix(in srgb, var(--cc-card) 82%, transparent) !important; backdrop-filter: blur(14px);
+              border-bottom: 1px solid var(--cc-borda) !important; }
+.app-sidebar { background: linear-gradient(190deg, #0b1230 0%, #111a3d 55%, #1a1447 100%) !important; border-right: 1px solid rgba(255,255,255,.06); }
+.sidebar-brand { border-bottom: 1px solid rgba(255,255,255,.08) !important; }
+.brand-link .brand-text, .brand-link i { color: #fff; }
+.brand-link i { background: linear-gradient(135deg, #6366f1, #06b6d4); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.sidebar-menu > .nav-item > .nav-link { border-radius: .65rem; margin: .12rem .5rem; transition: background .25s, transform .25s; }
+.sidebar-menu > .nav-item > .nav-link:hover { background: rgba(255,255,255,.07); transform: translateX(3px); }
+.sidebar-menu > .nav-item > .nav-link.active { background: linear-gradient(135deg, #6366f1, #8b5cf6) !important; box-shadow: 0 6px 18px rgba(99,102,241,.45); }
+.app-footer { background: transparent !important; border-top: 1px solid var(--cc-borda) !important; color: var(--cc-suave); }
+.app-content-header h3 { font-weight: 800; letter-spacing: -.02em; }
 
-.small-box .small-box-icon {
-    opacity: 0.35;
-}
+/* ---------- Cards genericos ---------- */
+.card { background: var(--cc-card); border: 1px solid var(--cc-borda); border-radius: 1rem; box-shadow: var(--cc-sombra); }
+.card-header { background: transparent; border-bottom: 1px solid var(--cc-borda); }
+.table { --bs-table-bg: transparent; }
 
-.login-page {
-    background: linear-gradient(135deg, #0f2557, #4a2fb5);
-}
+.login-page { background: linear-gradient(135deg, #0b1230, #4a2fb5); }
+.login-logo a { color: #fff; font-weight: 700; }
 
-.login-logo a {
-    color: #ffffff;
-    font-weight: 700;
-}
+/* ---------- Animacao de entrada ---------- */
+.reveal { opacity: 0; transform: translateY(26px) scale(.985); transition: opacity .7s ease, transform .7s cubic-bezier(.2, .8, .2, 1); transition-delay: var(--d, 0s); }
+.reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }

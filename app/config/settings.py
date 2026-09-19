@@ -19,6 +19,9 @@ SLA_INICIO_META_MINUTOS = {
     4: 240,
 }
 
+# Handoff N1 -> N2: acima deste tempo (minutos) o repasse e considerado em atraso.
+LIMITE_REPASSE_N2_MINUTOS = float(os.getenv("LIMITE_REPASSE_N2_MINUTOS", "30"))
+
 SLA_META_EFICIENCIA_PERCENTUAL = 95.0
 SLA_META_AGING_PERCENTUAL = 100.0
 SLA_META_REABERTURA_PERCENTUAL = 5.0

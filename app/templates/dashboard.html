@@ -1,32 +1,56 @@
 {% extends "base.html" %}
+{% macro falhas_txt(falhas) %}{% for f in falhas %}{{ f.texto }}{% if f.qtd > 1 %} ({{ f.qtd }}x){% endif %}{% if not loop.last %}, {% endif %}{% endfor %}{% endmacro %}
+{% macro dec(v) %}{{ ('%.1f' % v)|replace('.', ',') }}{% endmacro %}
 {% block titulo %}Dashboard{% endblock %}
 {% block titulo_pagina %}Dashboard Mensal{% endblock %}
 {% block breadcrumb_atual %}Dashboard{% endblock %}
 
+{% block head_extra %}
+<link href="{{ estatico('css/dashboard.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% macro kpi(cor, icone, rotulo, valor, sufixo, meta, grafico_id, decimais=0, dica='') %}
+<div class="kpi {{ cor }} reveal">
+    <div class="kpi-cab">
+        <span class="kpi-icone"><i class="bi {{ icone }}"></i></span>
+        <span class="kpi-rotulo">{{ rotulo }}</span>
+    </div>
+    <div class="kpi-centro">
+        <div class="kpi-valor"><span data-count="{{ valor }}" data-decimals="{{ decimais }}">0</span>{% if sufixo %}<small>{{ sufixo }}</small>{% endif %}</div>
+        <div class="kpi-grafico" id="{{ grafico_id }}"></div>
+    </div>
+    <div class="kpi-rodape">
+        <span class="kpi-meta">{{ meta }}</span>
+        {% if dica %}<span class="kpi-dica">{{ dica }}</span>{% endif %}
+    </div>
+</div>
+{% endmacro %}
+
+{% macro painel(icone, titulo, sub, id, altura=340) %}
+<div class="painel reveal">
+    <div class="painel-topo"><span class="ic"><i class="bi {{ icone }}"></i></span><div><h3>{{ titulo }}</h3><small>{{ sub }}</small></div></div>
+    <div id="{{ id }}" style="min-height: {{ altura }}px"></div>
+</div>
+{% endmacro %}
+
 {% block content %}
 
-<div class="card mb-4">
-    <div class="card-body py-2">
-        <form method="get" action="/dashboard" class="row g-2 align-items-center">
-            <div class="col-auto">
-                <label class="col-form-label">Competencia</label>
-            </div>
-            <div class="col-auto">
-                <select class="form-select" name="competencia_id" onchange="this.form.submit()">
-                    {% for c in competencias %}
-                    <option value="{{ c.id }}" {% if competencia and c.id == competencia.id %}selected{% endif %}>{{ c.rotulo }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            {% if competencia %}
-            <div class="col-auto ms-auto">
-                <a href="/exportar/dados-rac?competencia_id={{ competencia.id }}" class="btn btn-outline-primary">
-                    <i class="bi bi-file-earmark-excel me-1"></i>Exportar Dados_RAC
-                </a>
-            </div>
-            {% endif %}
-        </form>
-    </div>
+<div class="hero">
+    <form method="get" action="/dashboard" class="d-flex flex-wrap align-items-center gap-3">
+        <div class="me-auto">
+            <span class="ao-vivo"><i></i>PAINEL OPERACIONAL N2</span>
+            <h2 class="mt-2">Central de Atendimento &amp; SLA</h2>
+            <div class="hero-sub">{% if competencia %}Competencia {{ competencia.rotulo }} &middot; {{ competencia.status }}{% else %}Nenhuma competencia carregada{% endif %}</div>
+        </div>
+        <select class="form-select w-auto" name="competencia_id" onchange="this.form.submit()" aria-label="Competencia">
+            {% for c in competencias %}
+            <option value="{{ c.id }}" {% if competencia and c.id == competencia.id %}selected{% endif %}>{{ c.rotulo }}</option>
+            {% endfor %}
+        </select>
+        {% if competencia %}
+        <a href="/exportar/dados-rac?competencia_id={{ competencia.id }}" class="btn btn-hero"><i class="bi bi-file-earmark-excel me-1"></i>Exportar Dados_RAC</a>
+        {% endif %}
+    </form>
 </div>
 
 {% if not competencia %}
@@ -36,96 +60,170 @@
 </div>
 {% else %}
 
-<div class="row">
-    <div class="col-lg-3 col-6">
-        <div class="small-box {{ 'text-bg-success' if cards.eficiencia_sla >= meta_eficiencia else 'text-bg-danger' }}">
-            <div class="inner">
-                <h3>{{ cards.eficiencia_sla }}<sup class="fs-6">%</sup></h3>
-                <p>Eficiencia de SLA</p>
+<div class="row g-4 mb-2">
+    <div class="col-xl-3 col-md-6">{{ kpi('ok' if cards.eficiencia_sla >= meta_eficiencia else 'nok', 'bi-speedometer2', 'Eficiencia de SLA', cards.eficiencia_sla, '%', 'Meta ≥ ' ~ meta_eficiencia ~ '%', 'kpiEficiencia', 2, 'Incidentes no prazo') }}</div>
+    <div class="col-xl-3 col-md-6">{{ kpi('ok' if cards.aging_pct >= meta_aging else 'nok', 'bi-hourglass-split', 'Aging 8 dias', cards.aging_pct, '%', 'Meta = ' ~ meta_aging ~ '%', 'kpiAging', 2, 'Resolvidos em ate 8 dias') }}</div>
+    <div class="col-xl-3 col-md-6">{{ kpi('ok' if cards.taxa_reabertura <= meta_reabertura else 'nok', 'bi-arrow-repeat', 'Taxa de reabertura', cards.taxa_reabertura, '%', 'Meta ≤ ' ~ meta_reabertura ~ '%', 'kpiReabertura', 2, 'Reaberturas / incidentes') }}</div>
+    <div class="col-xl-3 col-md-6">{{ kpi('ciano', 'bi-clock-history', 'Total de horas', cards.total_horas, 'h', cards.total_incidentes ~ ' incidentes', 'kpiHoras', 1, cards.total_requisicoes ~ ' requisicoes') }}</div>
+</div>
+
+<div class="secao-titulo">Analise de Esforco <small>horas, classificacao e aplicacoes</small></div>
+<div class="row g-3 mb-3">
+    <div class="col-xl-6">{{ painel('bi-bar-chart-fill', 'Horas por Aplicacao', 'Top 10 aplicacoes por horas totais', 'graficoHorasApp') }}</div>
+    <div class="col-xl-6">{{ painel('bi-pie-chart-fill', 'Atendimento por Classificacao / Hora', 'Requisicoes, melhorias, incidentes, outras filas e sem chamado', 'graficoClassificacao') }}</div>
+    <div class="col-xl-6">{{ painel('bi-grid-fill', 'Atendimento por Aplicacao', 'Chamados (incidentes + requisicoes) por aplicacao', 'graficoAtendApp') }}</div>
+    <div class="col-xl-6">{{ painel('bi-shield-check', 'Incidentes: % Eficiencia por SQUAD', 'Total de incidentes x encerrados dentro do SLA', 'graficoSquad') }}</div>
+</div>
+
+<div class="secao-titulo">Visao de SLA <small>prioridade, distribuicao e grupos</small></div>
+<div class="row g-3 mb-3">
+    <div class="col-xl-5">{{ painel('bi-layers-fill', 'SLA por Prioridade', 'No prazo x atraso', 'graficoPrioridade', 300) }}</div>
+    <div class="col-xl-3 col-md-5">{{ painel('bi-record-circle-fill', 'Distribuicao SLA', 'Proporcao no prazo / atraso', 'graficoPizza', 300) }}</div>
+    <div class="col-xl-4 col-md-7">{{ painel('bi-people-fill', 'Horas por Grupo de Atribuicao', 'Top 10 grupos', 'graficoGrupo', 300) }}</div>
+</div>
+
+<div class="secao-titulo">L2 em Numeros</div>
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="painel reveal total-anel">
+            <span class="pulso"></span><span class="pulso"></span><span class="pulso"></span>
+            <div style="position: relative; z-index: 1">
+                <div class="tit fw-bold text-uppercase small" style="color: var(--cc-suave); letter-spacing: .06em">Total de Incidentes Analisados</div>
+                <div class="num my-2" data-count="{{ cards.total_incidentes }}">0</div>
+                <div class="chips">
+                    <span class="chip ok"><i class="bi bi-check-circle-fill me-1"></i>{{ sla_pizza.valores[0] }} no prazo</span>
+                    <span class="chip nok"><i class="bi bi-x-circle-fill me-1"></i>{{ sla_pizza.valores[1] }} em atraso</span>
+                </div>
+                <div class="small mt-2" style="color: var(--cc-suave)">{{ competencia.rotulo }}</div>
             </div>
-            <i class="small-box-icon bi bi-speedometer2"></i>
-            <span class="small-box-footer">Meta &ge; {{ meta_eficiencia }}%</span>
         </div>
     </div>
-    <div class="col-lg-3 col-6">
-        <div class="small-box {{ 'text-bg-success' if cards.aging_pct >= meta_aging else 'text-bg-danger' }}">
-            <div class="inner">
-                <h3>{{ cards.aging_pct }}<sup class="fs-6">%</sup></h3>
-                <p>Aging 8 Dias</p>
+    <div class="col-md-4"><div class="painel reveal medidor" style="--d: .1s"><div class="tit">Eficiencia Global (Cumprimento de SLA)</div><div id="medidorEficiencia"></div><div class="meta">Meta &ge; {{ meta_eficiencia }}%</div></div></div>
+    <div class="col-md-4"><div class="painel reveal medidor" style="--d: .2s"><div class="tit">Resolucao de Aging dentro de 8 Dias</div><div id="medidorAging"></div><div class="meta">Meta = {{ meta_aging }}%</div></div></div>
+</div>
+
+<div class="secao-titulo">Fluxo N1 &rarr; N2</div>
+<div class="fluxo mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+        <div>
+            <h4><i class="bi bi-diagram-3-fill text-warning me-2"></i>Diagnostico de Fluxo e Atrito</h4>
+            <div class="sub mt-1">(Handoff N1 &rarr; N2)</div>
+        </div>
+        <span class="pill"><i class="bi bi-stopwatch-fill me-1"></i>Ponto de Calibragem &gt; {{ fluxo.limite }} min</span>
+    </div>
+
+    <div class="fluxo-linha">
+        <div class="fluxo-caixa n1">
+            <div class="topo">Caixa N1</div>
+            <div class="corpo"><i class="bi bi-inbox-fill"></i>Triagem e Encaminhamento</div>
+        </div>
+        <div class="fluxo-meio">
+            <div class="fluxo-trilho"><div class="cheio"></div><div class="particula"></div></div>
+            <div class="fluxo-relogio"><i class="bi bi-stopwatch"></i>&gt;{{ fluxo.limite }}'</div>
+            <div class="fluxo-alerta">
+                {% if fluxo.disponivel %}
+                <i class="bi bi-exclamation-triangle-fill me-1"></i><span class="num" data-contar="{{ fluxo.atrasados }}">0</span> Incidentes repassados com atraso &gt; {{ fluxo.limite }} minutos
+                {% if fluxo.detalhe %}<small>(Soma mensal: {{ fluxo.soma }})</small>{% endif %}
+                {% else %}
+                <i class="bi bi-exclamation-triangle-fill me-1"></i>Sem dado de repasse N1 &rarr; N2
+                <small>Importe o export com a coluna de repasse/tempo de atribuicao ao N2.</small>
+                {% endif %}
             </div>
-            <i class="small-box-icon bi bi-hourglass-split"></i>
-            <span class="small-box-footer">Meta = {{ meta_aging }}%</span>
+        </div>
+        <div class="fluxo-caixa n2">
+            <div class="topo">Caixa N2</div>
+            <div class="corpo"><i class="bi bi-shield-fill-check"></i>Resolucao<small>(SLA em contagem)</small></div>
         </div>
     </div>
-    <div class="col-lg-3 col-6">
-        <div class="small-box {{ 'text-bg-success' if cards.taxa_reabertura <= meta_reabertura else 'text-bg-danger' }}">
-            <div class="inner">
-                <h3>{{ cards.taxa_reabertura }}<sup class="fs-6">%</sup></h3>
-                <p>Taxa de Reabertura</p>
-            </div>
-            <i class="small-box-icon bi bi-arrow-repeat"></i>
-            <span class="small-box-footer">Meta &le; {{ meta_reabertura }}%</span>
+
+    <div class="fluxo-paineis">
+        <div class="fluxo-painel impacto">
+            <h6><i class="bi bi-pie-chart-fill me-1"></i>Impacto Sistemico</h6>
+            {% if fluxo.disponivel %}
+            <p>Aproximadamente {{ fluxo.pct }}% de todo o volume do mes ({{ fluxo.atrasados }} de {{ fluxo.total }} incidentes) chegou ao N2 com o relogio de SLA comprometido.</p>
+            {% else %}
+            <p>O impacto sera calculado como incidentes repassados acima de {{ fluxo.limite }} min / total de incidentes do mes ({{ fluxo.total }}).</p>
+            {% endif %}
         </div>
-    </div>
-    <div class="col-lg-3 col-6">
-        <div class="small-box text-bg-primary">
-            <div class="inner">
-                <h3>{{ cards.total_horas }}<sup class="fs-6">h</sup></h3>
-                <p>Total de Horas</p>
-            </div>
-            <i class="small-box-icon bi bi-clock-history"></i>
-            <span class="small-box-footer">{{ cards.total_incidentes }} incidentes / {{ cards.total_requisicoes }} requisicoes</span>
+        <div class="fluxo-painel takeaway">
+            <h6><i class="bi bi-lightbulb-fill me-1"></i>Takeaway</h6>
+            <p>Ponto de Atencao: a calibragem no fluxo inicial de triagem do N1 reduzira o estresse nos tempos de resposta e elevara ainda mais a fluidez global da operacao.</p>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-lg-4">
-        <div class="card mb-4">
-            <div class="card-header"><h3 class="card-title">SLA por Prioridade</h3></div>
-            <div class="card-body"><div id="graficoPrioridade"></div></div>
-        </div>
-    </div>
-    <div class="col-lg-4">
-        <div class="card mb-4">
-            <div class="card-header"><h3 class="card-title">Distribuicao SLA</h3></div>
-            <div class="card-body"><div id="graficoPizza"></div></div>
-        </div>
-    </div>
-    <div class="col-lg-4">
-        <div class="card mb-4">
-            <div class="card-header"><h3 class="card-title">Horas por Grupo de Atribuicao</h3></div>
-            <div class="card-body"><div id="graficoGrupo"></div></div>
-        </div>
-    </div>
-</div>
 
-<div class="card mb-4">
-    <div class="card-header"><h3 class="card-title">Top 10 Incidentes em Atraso</h3></div>
+<div class="secao-titulo">Ranking de Aplicacoes</div>
+{% if ranking and ranking.podio %}
+<div class="mb-4">
+    <div class="rank-titulo">
+        <h4>Panorama de Incidentes: Ranking de Aplicacoes ({{ competencia.rotulo }})</h4>
+        <p class="text-muted mb-0">Analise do volume de incidentes (N2) registrados na competencia, destacando as plataformas criticas que demandaram maior suporte. O foco esta na correlacao entre as aplicacoes mais acionadas e as falhas recorrentes relatadas pelos usuarios.</p>
+    </div>
+    <div class="rank-podio">
+        {% for pos in [2, 1, 3] %}{% set a = ranking.podio[pos - 1] if ranking.podio | length >= pos else None %}{% if a %}
+        <div class="rank-col c{{ pos }}">
+            {% if pos == 1 %}<div class="rank-coroa">&#x1F451;</div>{% endif %}
+            <div class="rank-badge"><i class="bi {{ 'bi-trophy-fill' if pos == 1 else 'bi-ticket-perforated-fill' }} me-1"></i>{{ pos }}&ordm;</div>
+            <div class="rank-card">
+                {% if pos == 1 %}<div class="rank-fogo"><i class="bi bi-fire"></i> MAIOR VOLUME DE CHAMADOS</div>{% endif %}
+                <h5 class="rank-app">{{ a.aplicacao }}</h5>
+                <p class="rank-falhas">{{ falhas_txt(a.falhas) }}</p>
+                <div class="rank-tags">
+                    <span class="rank-tag cham"><i class="bi bi-clipboard2-data me-1"></i>{{ a.chamados }} Chamados</span>
+                    <span class="rank-tag neutra">{{ dec(a.horas) }} h</span>
+                    {% if pos == 1 %}<span class="rank-tag pct">{{ dec(a.pct) }}% do Mes</span>{% else %}<span class="rank-tag vol">{{ dec(a.pct) }}% vol.</span>{% endif %}
+                </div>
+            </div>
+            <div class="rank-pedestal">{{ pos }}&ordm; LUGAR</div>
+        </div>
+        {% endif %}{% endfor %}
+    </div>
+
+    {% if ranking.demais %}
+    <div class="rank-subtitulo"><i class="bi bi-list-ul text-primary me-1"></i>Principais Motivos de Abertura &amp; Demais Aplicacoes</div>
+    <div class="rank-demais">
+        {% for a in ranking.demais %}
+        <div class="rank-item">
+            <div class="cab"><span title="{{ a.aplicacao }}">{{ a.posicao }}&ordm; {{ a.aplicacao }}</span><span class="rank-nivel {{ a.nivel | lower }}">{{ 'Estável' if a.nivel == 'Estavel' else a.nivel }}</span></div>
+            <div class="rank-barra"><div style="width: {{ (a.chamados / ranking.maior * 100) | round(1) }}%">{{ a.chamados }} chamados</div></div>
+            <p><strong>Falhas relatadas:</strong> {{ falhas_txt(a.falhas) }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="secao-titulo">Top 10 Incidentes em Atraso <small>maior excesso sobre a meta de SLA</small></div>
+<div class="card mb-4 reveal">
     <div class="card-body table-responsive p-0">
-        <table class="table table-striped table-hover mb-0">
+        <table class="table table-hover align-middle mb-0 tabela-atraso">
             <thead>
                 <tr>
-                    <th>Numero</th>
-                    <th>Prioridade</th>
-                    <th>Grupo</th>
-                    <th>Duracao (h)</th>
-                    <th>Meta (h)</th>
-                    <th>Status</th>
+                    <th>#</th><th>Numero</th><th>Prioridade</th><th>Grupo</th><th>Duracao (h)</th><th>Meta (h)</th><th style="min-width:140px">Excesso</th><th>Status</th>
                 </tr>
             </thead>
             <tbody>
+                {% set excesso_max = namespace(v=1) %}
+                {% for i in top_atrasados %}{% set ex = (i.duracao_horas | float) - (i.meta_sla_horas | float) %}{% if ex > excesso_max.v %}{% set excesso_max.v = ex %}{% endif %}{% endfor %}
                 {% for i in top_atrasados %}
+                {% set ex = (i.duracao_horas | float) - (i.meta_sla_horas | float) %}
                 <tr>
-                    <td>{{ i.numero }}</td>
+                    <td class="text-muted">{{ loop.index }}</td>
+                    <td class="fw-semibold">{{ i.numero }}</td>
                     <td>{{ i.prioridade }}</td>
                     <td>{{ i.grupo_atribuicao }}</td>
                     <td>{{ i.duracao_horas }}</td>
                     <td>{{ i.meta_sla_horas }}</td>
-                    <td><span class="badge text-bg-danger">{{ i.status_sla }}</span></td>
+                    <td>
+                        <div class="barra-excesso"><div style="width: {{ (ex / excesso_max.v * 100) | round(1) }}%"></div></div>
+                        <small class="text-muted">+{{ ('%.1f' % ex) | replace('.', ',') }} h</small>
+                    </td>
+                    <td><span class="badge rounded-pill text-bg-danger">{{ i.status_sla }}</span></td>
                 </tr>
                 {% else %}
-                <tr><td colspan="6" class="text-center text-muted py-3">Nenhum incidente em atraso.</td></tr>
+                <tr><td colspan="8" class="text-center text-muted py-4">Nenhum incidente em atraso.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -138,40 +236,121 @@
 {% block scripts %}
 {% if competencia %}
 <script>
-const paleta = {
-    verde: '#28a745',
-    vermelho: '#dc3545',
-    roxo: '#6f42c1',
-};
+const D = {{ {
+    'prioridade': sla_prioridade, 'pizza': sla_pizza, 'grupo': horas_grupo,
+    'horasApp': graf_horas_app, 'classificacao': graf_classificacao, 'atendApp': graf_atend_app, 'squad': graf_squad,
+    'cards': cards, 'metas': {'eficiencia': meta_eficiencia, 'aging': meta_aging, 'reabertura': meta_reabertura},
+} | tojson }};
 
-new ApexCharts(document.querySelector('#graficoPrioridade'), {
-    chart: { type: 'bar', height: 280, stacked: true, toolbar: { show: false } },
-    series: [
-        { name: 'No Prazo', data: {{ sla_prioridade.no_prazo | tojson }} },
-        { name: 'Atraso', data: {{ sla_prioridade.atraso | tojson }} },
-    ],
-    xaxis: { categories: {{ sla_prioridade.labels | tojson }} },
-    colors: [paleta.verde, paleta.vermelho],
+const P = CC.paleta;
+const PALETA = [P.indigo, P.violeta, P.ciano, P.esmeralda, P.ambar, P.rosa, P.azul, P.laranja, '#a3e635', '#e879f9'];
+const ESCURA = ['#4338ca', '#6d28d9', '#0e7490', '#047857', '#b45309', '#be123c', '#0369a1', '#c2410c', '#65a30d', '#a21caf'];
+const num = v => Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+
+/* Colunas verticais animadas, com valor no topo. */
+function colunas(id, dados, { distribuido = false, cores = PALETA, escuras = ESCURA, sufixo = '', nome = 'Valor' } = {}) {
+    CC.grafico(id, c => c.base({
+        chart: { type: 'bar', height: 340 },
+        series: [{ name: nome, data: dados.valores }],
+        plotOptions: { bar: { columnWidth: '58%', borderRadius: 8, borderRadiusApplication: 'end', distributed: distribuido,
+                              dataLabels: { position: 'top' } } },
+        colors: cores, fill: c.gradiente(cores, escuras),
+        dataLabels: { enabled: true, offsetY: -24, formatter: v => num(v) + sufixo, style: { fontSize: '12px', fontWeight: 700, colors: [c.cores().rotulo] } },
+        xaxis: { categories: dados.labels, labels: { rotate: -35, trim: true, style: { fontSize: '11px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
+        yaxis: { labels: { formatter: v => num(v) } },
+        legend: { show: false },
+        tooltip: { y: { formatter: v => num(v) + sufixo } },
+    }));
+}
+
+colunas('#graficoHorasApp', D.horasApp, { distribuido: true, sufixo: 'h', nome: 'Horas' });
+colunas('#graficoClassificacao', D.classificacao, { distribuido: true, sufixo: 'h', nome: 'Horas',
+    cores: [P.indigo, P.esmeralda, P.rosa, P.ambar, '#64748b'], escuras: ['#4338ca', '#047857', '#be123c', '#b45309', '#334155'] });
+colunas('#graficoAtendApp', D.atendApp, { distribuido: true, nome: 'Atendimentos' });
+
+/* SQUAD: total x encerrados no prazo, com % de eficiencia no tooltip. */
+CC.grafico('#graficoSquad', c => c.base({
+    chart: { type: 'bar', height: 340 },
+    series: [{ name: 'Total de incidentes', data: D.squad.total }, { name: 'Encerrados no prazo (SLA)', data: D.squad.no_prazo }],
+    plotOptions: { bar: { columnWidth: '62%', borderRadius: 7, borderRadiusApplication: 'end', dataLabels: { position: 'top' } } },
+    colors: ['#64748b', P.esmeralda], fill: c.gradiente(['#64748b', P.esmeralda], ['#334155', '#047857']),
+    dataLabels: { enabled: true, offsetY: -22, style: { fontSize: '12px', fontWeight: 700, colors: [c.cores().rotulo] } },
+    xaxis: { categories: D.squad.labels, labels: { rotate: -25, trim: true }, axisBorder: { show: false }, axisTicks: { show: false } },
+    legend: { position: 'top', horizontalAlign: 'right' },
+    tooltip: { y: { formatter: (v, o) => {
+        const t = D.squad.total[o.dataPointIndex];
+        return o.seriesIndex === 1 && t ? v + ' (' + (v / t * 100).toFixed(1).replace('.', ',') + '% de eficiencia)' : v;
+    } } },
+}));
+
+CC.grafico('#graficoPrioridade', c => c.base({
+    chart: { type: 'bar', height: 300, stacked: true },
+    series: [{ name: 'No Prazo', data: D.prioridade.no_prazo }, { name: 'Atraso', data: D.prioridade.atraso }],
+    plotOptions: { bar: { columnWidth: '50%', borderRadius: 6 } },
+    colors: [P.esmeralda, P.rosa], fill: c.gradiente([P.esmeralda, P.rosa], ['#047857', '#be123c']),
+    xaxis: { categories: D.prioridade.labels, axisBorder: { show: false }, axisTicks: { show: false } },
+    dataLabels: { enabled: true, style: { fontSize: '11px', fontWeight: 700 } },
     legend: { position: 'bottom' },
-    dataLabels: { enabled: false },
-}).render();
+}));
 
-new ApexCharts(document.querySelector('#graficoPizza'), {
-    chart: { type: 'donut', height: 280 },
-    series: {{ sla_pizza.valores | tojson }},
-    labels: {{ sla_pizza.labels | tojson }},
-    colors: [paleta.verde, paleta.vermelho],
-    legend: { position: 'bottom' },
-}).render();
+CC.grafico('#graficoPizza', c => c.base({
+    chart: { type: 'donut', height: 300 },
+    series: D.pizza.valores, labels: D.pizza.labels,
+    colors: [P.esmeralda, P.rosa], fill: c.gradiente([P.esmeralda, P.rosa], ['#047857', '#be123c']),
+    stroke: { width: 3, colors: [c.escuro() ? '#0f172a' : '#fff'] },
+    plotOptions: { pie: { donut: { size: '72%', labels: { show: true,
+        name: { color: c.cores().texto }, value: { color: c.cores().rotulo, fontSize: '28px', fontWeight: 800 },
+        total: { show: true, label: 'Incidentes', color: c.cores().texto, formatter: w => w.globals.seriesTotals.reduce((a, b) => a + b, 0) } } } } },
+    dataLabels: { enabled: false }, legend: { position: 'bottom' },
+}));
 
-new ApexCharts(document.querySelector('#graficoGrupo'), {
-    chart: { type: 'bar', height: 280, toolbar: { show: false } },
-    plotOptions: { bar: { horizontal: true } },
-    series: [{ name: 'Horas', data: {{ horas_grupo.valores | tojson }} }],
-    xaxis: { categories: {{ horas_grupo.labels | tojson }} },
-    colors: [paleta.roxo],
-    dataLabels: { enabled: false },
-}).render();
+CC.grafico('#graficoGrupo', c => c.base({
+    chart: { type: 'bar', height: 300 },
+    series: [{ name: 'Horas', data: D.grupo.valores }],
+    plotOptions: { bar: { horizontal: true, borderRadius: 6, distributed: true, barHeight: '68%' } },
+    colors: PALETA, fill: c.gradiente(PALETA, ESCURA, true),
+    xaxis: { categories: D.grupo.labels, axisBorder: { show: false } },
+    dataLabels: { enabled: true, formatter: v => num(v) + 'h', style: { fontSize: '11px', fontWeight: 700 } },
+    legend: { show: false },
+}));
+
+/* KPIs: mini medidores radiais e sparkline. */
+function radialMini(id, valor, cor) {
+    CC.grafico(id, c => c.base({
+        chart: { type: 'radialBar', height: 88, width: 88, sparkline: { enabled: true } },
+        series: [Math.min(valor, 100)],
+        plotOptions: { radialBar: { hollow: { size: '52%' }, track: { background: c.cores().trilho },
+                                    dataLabels: { name: { show: false }, value: { show: false } } } },
+        colors: [cor], fill: c.gradiente([cor], [cor === P.esmeralda ? P.ciano : P.ambar]), stroke: { lineCap: 'round' },
+    }));
+}
+const ok = (v, meta, menor) => (menor ? v <= meta : v >= meta) ? P.esmeralda : P.rosa;
+radialMini('#kpiEficiencia', D.cards.eficiencia_sla, ok(D.cards.eficiencia_sla, D.metas.eficiencia));
+radialMini('#kpiAging', D.cards.aging_pct, ok(D.cards.aging_pct, D.metas.aging));
+radialMini('#kpiReabertura', Math.max(D.cards.taxa_reabertura, 2), ok(D.cards.taxa_reabertura, D.metas.reabertura, true));
+CC.grafico('#kpiHoras', c => c.base({
+    chart: { type: 'area', height: 88, width: 88, sparkline: { enabled: true } },
+    series: [{ name: 'Horas', data: D.grupo.valores.length ? D.grupo.valores : [0] }],
+    stroke: { curve: 'smooth', width: 3 }, colors: [P.ciano],
+    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: .55, opacityTo: 0, stops: [0, 100] } },
+    tooltip: { fixed: { enabled: false }, x: { show: false }, y: { formatter: v => num(v) + ' h' }, marker: { show: false } },
+}));
+
+/* Medidores semicirculares grandes (L2 em Numeros). */
+function medidor(id, valor, meta) {
+    const cor = valor >= meta ? P.esmeralda : P.rosa;
+    CC.grafico(id, c => c.base({
+        chart: { type: 'radialBar', height: 250 },
+        series: [Math.min(valor, 100)], labels: ['Atingido'],
+        plotOptions: { radialBar: { startAngle: -115, endAngle: 115, hollow: { size: '62%' },
+            track: { background: c.cores().trilho, strokeWidth: '100%' },
+            dataLabels: { name: { offsetY: 22, color: c.cores().texto, fontSize: '13px' },
+                          value: { offsetY: -18, fontSize: '34px', fontWeight: 800, color: c.cores().rotulo, formatter: v => num(v) + '%' } } } },
+        colors: [cor], fill: c.gradiente([cor], [valor >= meta ? P.ciano : P.ambar]), stroke: { lineCap: 'round' },
+    }));
+}
+medidor('#medidorEficiencia', D.cards.eficiencia_sla, D.metas.eficiencia);
+medidor('#medidorAging', D.cards.aging_pct, D.metas.aging);
 </script>
 {% endif %}
 {% endblock %}

@@ -79,6 +79,15 @@ INC_COLS = {
         "numero de reaberturas",
     ],
     "descricao_resumida": ["short description", "descricao resumida", "descrição resumida", "descricao breve"],
+    # Handoff N1 -> N2 (opcionais): data/hora do repasse ou o tempo ja calculado.
+    "repasse_n2_em": [
+        "repassado em", "data de repasse", "data do repasse", "repasse n2", "data repasse n2",
+        "data de atribuicao n2", "data de atribuição n2", "assigned to n2", "n2 assigned", "handoff n2",
+    ],
+    "tempo_repasse_segundos": [
+        "tempo de repasse", "tempo ate repasse", "tempo até repasse", "tempo de repasse (segundos)",
+        "tempo para atribuicao", "tempo para atribuição", "time to assign", "handoff time",
+    ],
 }
 
 REQ_COLS = {
@@ -162,6 +171,17 @@ def _match_rac_sheets(sheets: dict):
     if df_req is None and len(abas_ordenadas) > 2:
         df_req = abas_ordenadas[2]
     return df_horas, df_inc, df_req
+
+
+def _tempo_repasse_minutos(row, criado_em) -> Optional[float]:
+    """Minutos entre a abertura e o repasse ao N2; None quando o export nao traz o dado."""
+    repasse_em = safe_datetime(row.get("repasse_n2_em"))
+    if repasse_em and criado_em:
+        return round(max((repasse_em - criado_em).total_seconds(), 0) / 60, 2)
+    segundos = safe_str(row.get("tempo_repasse_segundos"))
+    if segundos:
+        return round(safe_float(segundos) / 60, 2)
+    return None
 
 
 def _avisar_colunas_nao_localizadas(avisos: list, nome_arquivo: str, mapeamento: dict, colunas_disponiveis) -> None:
@@ -299,11 +319,12 @@ class FileImportService:
                     duracao_negocios_segundos=safe_int(row.get("duracao_negocios_segundos")),
                     duracao_horas_informada=safe_float(row.get("duracao_horas")),
                 )
+                criado_em = safe_datetime(row.get("criado_em"))
                 registros.append(
                     Incidente(
                         competencia_id=competencia.id,
                         numero=numero,
-                        criado_em=safe_datetime(row.get("criado_em")),
+                        criado_em=criado_em,
                         estado=safe_str(row.get("estado")) or "Encerrado",
                         atribuicao_a=safe_str(row.get("atribuicao_a")),
                         grupo_atribuicao=normalizar_grupo_atribuicao(safe_str(row.get("grupo_atribuicao"))),
@@ -319,6 +340,7 @@ class FileImportService:
                         contagem_reaberturas=safe_int(row.get("contagem_reaberturas")),
                         horas_consumidas=horas_por_chamado.get(numero, 0.0),
                         descricao_resumida=safe_str(row.get("descricao_resumida")),
+                        tempo_repasse_minutos=_tempo_repasse_minutos(row, criado_em),
                     )
                 )
             if registros:
