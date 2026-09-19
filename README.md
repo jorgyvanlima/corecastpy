@@ -2,7 +2,9 @@
 
 Portal executivo de gestão de atendimentos AMS, controle de esforço e apuração de SLA para o contrato **Cast Group / Tereos**. Substitui um sistema legado em PHP que apresentava erros matemáticos de SLA, duplicidade não determinística de horas e falhas de leitura por colunas fixas.
 
-Stack: **Python 3.11 · FastAPI · SQLAlchemy · PostgreSQL 15 · Pandas/OpenPyXL · Jinja2 + AdminLTE 4 (Bootstrap 5) + ApexCharts · Docker Compose**.
+Stack: **Python 3.11 · FastAPI · SQLAlchemy · PostgreSQL 15 · Pandas/OpenPyXL · Jinja2 + AdminLTE 4 (Bootstrap 5) + ApexCharts 3.54 · Docker Compose**.
+
+> 📘 **Regras de negócio detalhadas** (como cada indicador e gráfico é calculado): [`docs/REGRAS_DE_NEGOCIO.md`](docs/REGRAS_DE_NEGOCIO.md).
 
 ---
 
@@ -12,6 +14,7 @@ Stack: **Python 3.11 · FastAPI · SQLAlchemy · PostgreSQL 15 · Pandas/OpenPyX
 - [Por que este projeto existe](#por-que-este-projeto-existe)
 - [Arquitetura](#arquitetura)
 - [Regras de negócio](#regras-de-negócio)
+- [Interface e dashboard](#interface-e-dashboard)
 - [Modelo de dados](#modelo-de-dados)
 - [Estrutura do repositório](#estrutura-do-repositório)
 - [Como executar](#como-executar)
@@ -34,7 +37,7 @@ O CoreCast processa três origens de dados mensais — **horas apontadas no Azur
 
 - Apuração determinística de SLA e *aging* por incidente;
 - Cruzamento de horas apontadas com os chamados que as originaram;
-- Dashboards executivos com metas contratuais;
+- Dashboard executivo moderno (tema claro/escuro) com KPIs de meta contratual, gráficos animados, diagnóstico de fluxo N1 → N2 e ranking de aplicações;
 - Visão anual/trimestral com baseline de horas de melhorias;
 - Exportação da planilha oficial consolidada `Dados_RAC`.
 
@@ -54,6 +57,7 @@ O sistema legado em PHP lia colunas por letra fixa (`B2`, `H15`...), o que quebr
 
 ```
 Navegador ── Jinja2 + AdminLTE 4 (Bootstrap 5) + ApexCharts (SSR, sem SPA)
+            CSS/JS próprios em /static (URLs com ?v=<data do arquivo> para evitar cache velho)
      │
      ▼
 FastAPI (app/main.py)
@@ -129,7 +133,17 @@ Taxa de Reabertura (%)  = (Σ contagem_reaberturas / total de incidentes) × 100
 Total de Horas          = Σ horas_tereos.horas da competência
 ```
 
-### 3. Parâmetro anual e baseline trimestral (`/anual`)
+### 3. Análises do dashboard (resumo)
+
+Além dos cards de SLA acima, o dashboard calcula (detalhes e fórmulas completas em [`docs/REGRAS_DE_NEGOCIO.md`](docs/REGRAS_DE_NEGOCIO.md)):
+
+- **Horas por aplicação / por classificação:** a aplicação vem do chamado citado no título da linha de horas; a classificação separa Requisições, Melhorias, Incidentes, Outras filas (PRB, CHG etc.) e Sem chamado.
+- **Atendimento por aplicação:** contagem de chamados (incidentes + requisições) por aplicação.
+- **Eficiência por SQUAD:** por grupo de atribuição, total de incidentes × encerrados/resolvidos dentro do SLA.
+- **Diagnóstico de Fluxo e Atrito (N1 → N2):** `incidentes com tempo de repasse > 30 min ÷ total de incidentes` (limite em `LIMITE_REPASSE_N2_MINUTOS`). Depende de coluna opcional no export — sem ela, a seção mostra estado "sem dado".
+- **Ranking de aplicações:** top 6 por quantidade de incidentes, com horas, % do volume, nível (Alta ≥ 10%, Moderada ≥ 3%, Estável) e falhas recorrentes extraídas das descrições.
+
+### 4. Parâmetro anual e baseline trimestral (`/anual`)
 
 - Agrega as competências do ano selecionado em 4 trimestres (Q1: jan–mar, Q2: abr–jun, Q3: jul–set, Q4: out–dez), recalculando eficiência de SLA, aging e reabertura por trimestre.
 - **Baseline de melhorias** (tabela `baseline_trimestral`): o saldo anterior é editável por trimestre; o saldo atualizado é recalculado a cada submissão:
@@ -142,6 +156,13 @@ Total de Horas          = Σ horas_tereos.horas da competência
 - A tabela `melhorias` não possui um arquivo de importação dedicado nas instruções originais do projeto — por isso o CRUD é feito diretamente na página `/anual` (registrar RITM, aplicação, horas estimadas, status, solicitante).
 - CRUD completo de competências mensais (criar, reabrir/fechar, excluir) em `/competencias`. **Excluir uma competência remove em cascata** todas as horas, incidentes, requisições e melhorias vinculadas (`ON DELETE CASCADE` no schema).
 
+## Interface e dashboard
+
+- **Tema:** claro/escuro (padrão escuro), alternável pelo botão de lua/sol no cabeçalho; a escolha fica salva no navegador e os gráficos se redesenham na cor do tema. Há também botão de tela cheia.
+- **Componentes visuais:** AdminLTE 4 como base, com tema próprio em [`app/static/css/custom.css`](app/static/css/custom.css) e estilos do dashboard em [`app/static/css/dashboard.css`](app/static/css/dashboard.css).
+- **Animações e gráficos:** [`app/static/js/corecast.js`](app/static/js/corecast.js) traz a fábrica de gráficos ApexCharts (gradientes, animação), os contadores animados e o efeito de entrada ao rolar. Cada gráfico só é desenhado quando aparece na tela. Respeita `prefers-reduced-motion`.
+- **Seções do dashboard, em ordem:** 4 KPIs de topo → Análise de Esforço (4 gráficos 2×2) → Visão de SLA (3 gráficos) → L2 em Números → Fluxo N1 → N2 → Ranking de Aplicações → Top 10 Incidentes em Atraso.
+
 ## Modelo de dados
 
 Schema completo em [`database/init.sql`](database/init.sql), espelhado 1:1 pelo ORM em [`app/models/models.py`](app/models/models.py):
@@ -151,10 +172,12 @@ Schema completo em [`database/init.sql`](database/init.sql), espelhado 1:1 pelo 
 | `usuarios` | Autenticação (bcrypt) e perfil (`admin` / `analista`) |
 | `competencias` | Uma linha por mês (`ano_mes` único, ex. `2026-08`); guarda os totais consolidados e o status `Aberta`/`Fechada` |
 | `horas_tereos` | Linhas de esforço do Azure DevOps já filtradas pela competência, com `chamado_associado` extraído por regex |
-| `incidentes` | Chamados INC do ServiceNow com SLA, aging e reaberturas já calculados |
+| `incidentes` | Chamados INC do ServiceNow com SLA, aging, reaberturas e (opcional) `tempo_repasse_minutos` do handoff N1 → N2 |
 | `requisicoes` | Chamados RITM do ServiceNow |
 | `melhorias` | Posições de melhoria (RITM, horas estimadas/consumidas, status) usadas no baseline trimestral |
 | `baseline_trimestral` | Saldo anterior de horas de melhorias por trimestre (`YYYY-Qn`) |
+
+A coluna `incidentes.tempo_repasse_minutos` é adicionada automaticamente no startup (`ALTER TABLE ... ADD COLUMN IF NOT EXISTS`), então bancos já existentes não precisam ser recriados.
 
 Índices dedicados em `competencia_id` e `numero`/`chamado_associado` para consultas e cruzamentos de alta performance (ver final de `init.sql`).
 
@@ -177,8 +200,13 @@ corecastpy/
 │   │   └── export_service.py    # geração do Excel Dados_RAC — ExportService
 │   ├── routers/                 # auth, importador, dashboard, anual, competencias, exportar
 │   ├── templates/                # Jinja2 (base, login, importar, dashboard, anual, competencias)
-│   ├── static/css/custom.css     # paleta corporativa sobreposta ao tema padrao do AdminLTE 4
+│   ├── static/
+│   │   ├── css/custom.css        # tema (claro/escuro), casca, cards
+│   │   ├── css/dashboard.css     # KPIs, painéis, fluxo N1→N2, ranking
+│   │   └── js/corecast.js        # tema, contadores, fábrica de gráficos ApexCharts
 │   └── templates_engine.py      # instância compartilhada de Jinja2Templates
+├── docs/
+│   └── REGRAS_DE_NEGOCIO.md      # regras de negócio e fórmulas de cada indicador
 ├── docker-compose.yml
 ├── Dockerfile
 ├── requirements.txt
@@ -228,6 +256,7 @@ Definidas em [`docker-compose.yml`](docker-compose.yml) com valores padrão, sob
 | `SECRET_KEY` | `corecast-dev-secret-change-me` | Chave de assinatura do cookie de sessão (`SessionMiddleware`) — **troque em produção** |
 | `SLA_META_P3_HORAS` | `12` | Meta de SLA (horas) para prioridade 3 — Média |
 | `SLA_META_P4_HORAS` | `32` | Meta de SLA (horas) para prioridade 4 — Baixa |
+| `LIMITE_REPASSE_N2_MINUTOS` | `30` | Acima deste tempo (min) o repasse N1 → N2 é contado como atraso no Diagnóstico de Fluxo e Atrito |
 | `ADMIN_EMAIL` | `admin@corecast.local` | E-mail do usuário administrador criado automaticamente no primeiro start |
 | `ADMIN_SENHA` | `admin123` | Senha do usuário administrador criado automaticamente — **troque em produção** |
 
@@ -247,7 +276,7 @@ O usuário admin só é criado se a tabela `usuarios` estiver vazia (checagem em
 Selecione uma competência existente **ou** crie uma nova informando mês/ano. Envie os três arquivos brutos (Horas Tereos, Incidentes, Requisições) **ou** um único consolidado `Dados_RAC` (que tem precedência sobre os brutos se ambos forem enviados). Ao processar, a importação anterior daquela competência é completamente substituída.
 
 ### `/dashboard`
-Selecione a competência no topo da página. Mostra os 4 cards executivos com badges verde/vermelho conforme a meta contratual, gráficos (SLA por prioridade, distribuição No Prazo × Atraso, horas por grupo de atribuição) e a tabela dos 10 incidentes mais atrasados. Link direto para exportar o `Dados_RAC` da competência selecionada.
+Selecione a competência no banner do topo. A página mostra, nesta ordem: 4 KPIs com meta (verde/vermelho), a Análise de Esforço (horas por aplicação, atendimento por classificação/hora, atendimento por aplicação e eficiência por SQUAD), a Visão de SLA, o bloco **L2 em Números**, o **Diagnóstico de Fluxo e Atrito**, o **Ranking de Aplicações** e a tabela dos 10 incidentes mais atrasados. O botão "Exportar Dados_RAC" baixa o consolidado da competência. Regras de cada bloco em [`docs/REGRAS_DE_NEGOCIO.md`](docs/REGRAS_DE_NEGOCIO.md).
 
 ### `/anual`
 Selecione o ano. Mostra os 4 cards trimestrais, o formulário de baseline de melhorias do trimestre em foco (clique em "Ver baseline" em qualquer card trimestral para trocar o foco), o CRUD de melhorias do período, o gráfico de evolução mensal (eficiência de SLA, aging, total de horas) e a tabela detalhada mês a mês.
@@ -289,6 +318,8 @@ O mapeamento é por **nome de cabeçalho** (case/acento-insensível), não por p
 | `duracao_horas` | `Duration (Hours)`, `Duração Horas` |
 | `contagem_reaberturas` | `Reopen count`, `Reaberturas` |
 | `descricao_resumida` | `Short description`, `Descrição Resumida` |
+| `repasse_n2_em` *(opcional)* | `Repassado em`, `Data de Repasse`, `Repasse N2`, `Assigned to N2`, `Handoff N2` e variações |
+| `tempo_repasse_segundos` *(opcional)* | `Tempo de Repasse`, `Tempo até Repasse`, `Time to assign`, `Handoff time` e variações |
 
 **Requisições** (`sc_req_item_XX.xlsx`) — mapa em `REQ_COLS`:
 
@@ -355,6 +386,9 @@ O `create_all` do SQLAlchemy roda no `startup` da aplicação como rede de segur
 - **`Bind for 0.0.0.0:XXXX failed: port is already allocated`** — outra aplicação/container já usa a porta. Ajuste o mapeamento em `docker-compose.yml` (ex.: `"8093:8000"`) e suba novamente com `docker compose up -d`.
 - **`ValueError: password cannot be longer than 72 bytes...` na inicialização** — incompatibilidade entre `passlib==1.7.4` e `bcrypt>=4.1`. Já resolvido neste repositório fixando `bcrypt==4.0.1` em `requirements.txt`; se você atualizar essa dependência, reintroduzirá o bug.
 - **Login redireciona em loop / `TypeError: unhashable type: 'dict'`** — sintoma de uma versão do Starlette cuja assinatura de `TemplateResponse` mudou para `(request, name, context)`. Todos os `TemplateResponse` deste projeto já usam a assinatura nova; se você adicionar uma nova página, siga o mesmo padrão usado em `app/routers/*.py`.
+- **A página não reflete uma edição de código (ou dá erro 500 logo após editar)** — em alguns ambientes (ex.: Docker no macOS) o `uvicorn --reload` não detecta mudanças no volume montado. Rode `docker compose restart web`.
+- **Visual/CSS antigo após atualizar** — os estilos e scripts próprios já carregam com `?v=<data do arquivo>`; se ainda ver o layout antigo, faça um *hard refresh* (Cmd/Ctrl+Shift+R).
+- **Diagnóstico de Fluxo mostra "Sem dado de repasse"** — o export importado não tem coluna de repasse N1 → N2. Inclua uma das colunas aceitas (ver tabela de Incidentes) e reimporte a competência.
 - **Horas não aparecem para a competência importada** — confira se o `Iteration Path` do export do Azure DevOps realmente contém o mês/ano da competência (ex.: `"Agosto 2026"`, `"2026-08"`); linhas de outros meses são descartadas por design (regra de negócio, não bug).
 - **`horas_consumidas` zerado num incidente/requisição** — o cruzamento depende do número do chamado aparecer no campo `Title` das Horas Tereos exatamente no formato `INCxxxxxxx`/`RITMxxxxxxx`/etc. (regex `NUMERO_CHAMADO_REGEX`); variações de formatação (espaços, hífens) não são capturadas.
 
@@ -368,6 +402,8 @@ O `create_all` do SQLAlchemy roda no `startup` da aplicação como rede de segur
 ## Limitações conhecidas / roadmap
 
 - **SLA de início de atendimento** (15 min / 30 min / 4h por prioridade) está parametrizado em `settings.py`, mas não é calculado — os exports padrão do ServiceNow usados como referência não trazem um campo de "primeira resposta"/"first response time". Adicionar esse cálculo requer mapear a coluna correspondente em `INC_COLS` e uma nova regra em `parsing_utils.py`.
+- **Repasse N1 → N2:** o export padrão do ServiceNow não traz data de repasse; o Diagnóstico de Fluxo e Atrito só passa a mostrar números quando o export incluir uma das colunas opcionais aceitas.
+- **Falhas recorrentes do ranking** são uma aproximação por palavras repetidas nas descrições, não uma classificação oficial.
 - **Importação de Melhorias** não tem um arquivo de origem dedicado (não especificado na origem do projeto); o cadastro é manual via CRUD em `/anual`.
 - Sem testes automatizados (`pytest`) neste momento — a validação foi feita manualmente ponta a ponta (importação CSV, importação `Dados_RAC` consolidado, cálculo de SLA/aging, cruzamento de horas, exportação, CRUD de competências com cascade). Contribuições adicionando uma suíte de testes são bem-vindas.
 - Perfil `analista` existe no schema (`usuarios.perfil`) e há uma dependência `exigir_admin` pronta em `security.py`, mas nenhuma rota atual restringe ações apenas a administradores — todo usuário autenticado tem acesso total.
